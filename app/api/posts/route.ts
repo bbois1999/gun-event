@@ -11,13 +11,14 @@ export async function POST(request: Request) {
     }
 
     const json = await request.json()
-    const { title, content, published, event } = json
+    const { title, content, published, event, image } = json
 
     const post = await prisma.post.create({
       data: {
         title,
         content,
         published,
+        ...(image && { image }),
         author: {
           connect: { id: session.user.id }
         },

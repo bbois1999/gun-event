@@ -59,14 +59,34 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap">{post.content}</p>
-            {'image' in post && post.image && (
-              <div className="mt-4 relative aspect-video">
-                <Image
-                  src={post.image}
-                  alt={post.title}
-                  fill
-                  className="object-cover rounded-md"
-                />
+            {/* Check if there's an image in either Post or ImagePost */}
+            {(('image' in post && post.image) || (post as any).image) && (
+              <div className="mt-4 relative aspect-video rounded-md overflow-hidden">
+                {/* Get the image from either type of post */}
+                {(() => {
+                  const imageUrl = ('image' in post) ? post.image : (post as any).image;
+                  if (typeof imageUrl === 'string' && imageUrl.startsWith('data:image')) {
+                    // Display base64 image
+                    return (
+                      <img 
+                        src={imageUrl} 
+                        alt={post.title}
+                        className="object-cover w-full h-full"
+                      />
+                    );
+                  } else if (typeof imageUrl === 'string') {
+                    // Fallback for non-base64 images
+                    return (
+                      <Image
+                        src={imageUrl}
+                        alt={post.title}
+                        fill
+                        className="object-cover"
+                      />
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
           </CardContent>

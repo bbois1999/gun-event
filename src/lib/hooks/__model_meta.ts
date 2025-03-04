@@ -77,6 +77,10 @@ const metadata = {
                     name: "published",
                     type: "Boolean",
                     attributes: [{ "name": "@default", "args": [{ "value": false }] }],
+                }, image: {
+                    name: "image",
+                    type: "String",
+                    isOptional: true,
                 }, author: {
                     name: "author",
                     type: "User",

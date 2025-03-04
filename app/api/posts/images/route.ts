@@ -13,12 +13,18 @@ export async function POST(request: Request) {
     const json = await request.json()
     const { title, content, published, image, event } = json
 
+    // Validate the image data
+    if (!image || typeof image !== 'string') {
+      return new NextResponse('Invalid image data', { status: 400 })
+    }
+
+    // Create the image post with the base64 data
     const imagePost = await prisma.imagePost.create({
       data: {
         title,
         content,
         published,
-        image,
+        image, // Store the base64 string directly
         author: {
           connect: { id: session.user.id }
         },

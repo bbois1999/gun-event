@@ -30,6 +30,7 @@ model Post {
   title     String
   content   String
   published Boolean  @default(false)
+  image     String?
   author    User     @relation(fields: [authorId], references: [id])
   authorId  String
   event     Event?   @relation(fields: [eventId], references: [id])

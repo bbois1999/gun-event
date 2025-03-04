@@ -40,6 +40,7 @@ model Post {
     title     String   @length(1, 256)
     content   String
     published Boolean  @default(false)
+    image     String?  // Optional image field to store base64 images
     author    User     @relation(fields: [authorId], references: [id])
     authorId  String
     event     Event?   @relation(fields: [eventId], references: [id])
