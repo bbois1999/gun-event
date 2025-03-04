@@ -26,6 +26,18 @@ const metadata = {
                     isDataModel: true,
                     isArray: true,
                     backLink: 'author',
+                }, imagePosts: {
+                    name: "imagePosts",
+                    type: "ImagePost",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'author',
+                }, events: {
+                    name: "events",
+                    type: "Event",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'author',
                 },
             }
             , uniqueConstraints: {
@@ -70,6 +82,110 @@ const metadata = {
                     type: "User",
                     isDataModel: true,
                     backLink: 'posts',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "authorId" },
+                }, authorId: {
+                    name: "authorId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'author',
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                },
+            }
+            ,
+        }
+        ,
+        imagePost: {
+            name: 'ImagePost', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, updatedAt: {
+                    name: "updatedAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@updatedAt", "args": [] }],
+                }, title: {
+                    name: "title",
+                    type: "String",
+                }, content: {
+                    name: "content",
+                    type: "String",
+                }, published: {
+                    name: "published",
+                    type: "Boolean",
+                    attributes: [{ "name": "@default", "args": [{ "value": false }] }],
+                }, author: {
+                    name: "author",
+                    type: "User",
+                    isDataModel: true,
+                    backLink: 'imagePosts',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "authorId" },
+                }, authorId: {
+                    name: "authorId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'author',
+                }, image: {
+                    name: "image",
+                    type: "String",
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                },
+            }
+            ,
+        }
+        ,
+        event: {
+            name: 'Event', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, updatedAt: {
+                    name: "updatedAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@updatedAt", "args": [] }],
+                }, title: {
+                    name: "title",
+                    type: "String",
+                }, description: {
+                    name: "description",
+                    type: "String",
+                }, date: {
+                    name: "date",
+                    type: "DateTime",
+                }, location: {
+                    name: "location",
+                    type: "String",
+                }, organizer: {
+                    name: "organizer",
+                    type: "String",
+                }, author: {
+                    name: "author",
+                    type: "User",
+                    isDataModel: true,
+                    backLink: 'events',
                     isRelationOwner: true,
                     foreignKeyMapping: { "id": "authorId" },
                 }, authorId: {

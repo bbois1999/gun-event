@@ -24,6 +24,7 @@ model User {
     password String @password @omit
     posts    Post[]
     imagePosts ImagePost[]
+    events    Event[]  // User can create events
     // everybody can signup
     @@allow('create', true)
 
@@ -66,4 +67,24 @@ model ImagePost {
 
     // full access by author
     @@allow('all', author == auth())
+}
+
+/// Gun Show Event model
+model Event {
+    id          String   @id @default(cuid())
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    title       String   @length(1, 256)
+    description String
+    date        DateTime
+    location    String
+    organizer   String
+    author      User     @relation(fields: [authorId], references: [id])
+    authorId    String
+    
+    // Allow read access to everyone for public events
+    @@allow('read', true)
+    
+    // Only the creator can update or delete events
+    @@allow('create,update,delete', author == auth())
 }

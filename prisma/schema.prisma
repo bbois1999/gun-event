@@ -14,10 +14,12 @@ generator client {
 
 /// User model
 model User {
-  id       String @id() @default(cuid())
-  email    String @unique()
-  password String
-  posts    Post[]
+  id         String      @id() @default(cuid())
+  email      String      @unique()
+  password   String
+  posts      Post[]
+  imagePosts ImagePost[]
+  events     Event[]
 }
 
 /// Post model
@@ -30,4 +32,36 @@ model Post {
   published Boolean  @default(false)
   author    User     @relation(fields: [authorId], references: [id])
   authorId  String
+  event     Event?   @relation(fields: [eventId], references: [id])
+  eventId   String?
+}
+
+model ImagePost {
+  id        String   @id() @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+  title     String
+  content   String
+  published Boolean  @default(false)
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  image     String
+  event     Event?   @relation(fields: [eventId], references: [id])
+  eventId   String?
+}
+
+/// Gun Show Event model
+model Event {
+  id          String      @id() @default(cuid())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt()
+  title       String
+  description String
+  date        DateTime
+  location    String
+  organizer   String
+  author      User        @relation(fields: [authorId], references: [id])
+  authorId    String
+  posts       Post[]
+  imagePosts  ImagePost[]
 }
