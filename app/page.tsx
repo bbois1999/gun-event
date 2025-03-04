@@ -1,101 +1,44 @@
-import Image from "next/image";
+import { Post } from "@/components/Post";
+
+// Example posts data - this would normally come from a database
+const examplePosts = [
+  {
+    username: "JohnDoe",
+    userAvatar: "https://api.dicebear.com/7.x/avatars/svg?seed=John",
+    timestamp: "2 hours ago",
+    content: "Looking forward to the upcoming gun show in Dallas! Will be bringing my collection of vintage rifles. Anyone else planning to attend?",
+    imageUrl: "https://images.unsplash.com/photo-1584727638096-042c45049ebe?w=800&auto=format",
+    likes: 42,
+    comments: 12,
+  },
+  {
+    username: "GunCollector",
+    userAvatar: "https://api.dicebear.com/7.x/avatars/svg?seed=Collector",
+    timestamp: "5 hours ago",
+    content: "Just restored this beautiful 1911. Can't wait to showcase it at next month's event!",
+    imageUrl: "https://images.unsplash.com/photo-1595590424283-b8f17842773f?w=800&auto=format",
+    likes: 89,
+    comments: 24,
+  },
+  {
+    username: "FirearmEnthusiast",
+    userAvatar: "https://api.dicebear.com/7.x/avatars/svg?seed=Enthusiast",
+    timestamp: "1 day ago",
+    content: "Great turnout at yesterday's show! Thanks to everyone who stopped by my booth. Here's a sneak peek of what I'll be bringing next time.",
+    imageUrl: "https://images.unsplash.com/photo-1584727638094-80524dfc771e?w=800&auto=format",
+    likes: 156,
+    comments: 32,
+  },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8 gap-8">
-      <main className="flex flex-col gap-8 items-center">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+    <main className="container mx-auto py-8">
+      <div className="flex flex-col items-center gap-6">
+        {examplePosts.map((post, index) => (
+          <Post key={index} {...post} />
+        ))}
+      </div>
+    </main>
   );
 }

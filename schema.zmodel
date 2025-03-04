@@ -10,13 +10,20 @@ generator client {
     provider = "prisma-client-js"
 }
 
+plugin hooks {
+  provider = '@zenstackhq/tanstack-query'
+  target = 'react'
+  version = 'v5'
+  output = "./src/lib/hooks"
+}
+
 /// User model
 model User {
     id       String @id @default(cuid())
     email    String @unique @email @length(6, 32)
     password String @password @omit
     posts    Post[]
-
+    imagePosts ImagePost[]
     // everybody can signup
     @@allow('create', true)
 
@@ -35,6 +42,25 @@ model Post {
     author    User     @relation(fields: [authorId], references: [id])
     authorId  String
 
+    // allow read for all signin users
+    @@allow('read', auth() != null && published)
+
+    // full access by author
+    @@allow('all', author == auth())
+}
+
+// make this allow image uploads
+model ImagePost {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    title     String   @length(1, 256)
+    content   String
+    published Boolean  @default(false)
+    author    User     @relation(fields: [authorId], references: [id])
+    authorId  String
+    image     String
+    
     // allow read for all signin users
     @@allow('read', auth() != null && published)
 
