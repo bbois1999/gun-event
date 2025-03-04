@@ -23,3 +23,5 @@ export const MOCK_USER = {
   name: "Temporary User",
   email: "temp@example.com"
 }; 
+
+export { authOptions };

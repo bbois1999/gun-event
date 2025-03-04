@@ -42,6 +42,8 @@ model Post {
     published Boolean  @default(false)
     author    User     @relation(fields: [authorId], references: [id])
     authorId  String
+    event     Event?   @relation(fields: [eventId], references: [id])
+    eventId   String?
 
     // allow read for all signin users
     @@allow('read', auth() != null && published)
@@ -61,6 +63,8 @@ model ImagePost {
     author    User     @relation(fields: [authorId], references: [id])
     authorId  String
     image     String
+    event     Event?   @relation(fields: [eventId], references: [id])
+    eventId   String?
     
     // allow read for all signin users
     @@allow('read', auth() != null && published)
@@ -71,16 +75,18 @@ model ImagePost {
 
 /// Gun Show Event model
 model Event {
-    id          String   @id @default(cuid())
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-    title       String   @length(1, 256)
+    id          String      @id @default(cuid())
+    createdAt   DateTime    @default(now())
+    updatedAt   DateTime    @updatedAt
+    title       String      @length(1, 256)
     description String
     date        DateTime
     location    String
     organizer   String
-    author      User     @relation(fields: [authorId], references: [id])
+    author      User        @relation(fields: [authorId], references: [id])
     authorId    String
+    posts       Post[]
+    imagePosts  ImagePost[]
     
     // Allow read access to everyone for public events
     @@allow('read', true)

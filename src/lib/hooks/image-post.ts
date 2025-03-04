@@ -328,7 +328,7 @@ export function useSuspenseCountImagePost<TArgs extends Prisma.ImagePostCountArg
     return useSuspenseModelQuery<TQueryFnData, TData, TError>('ImagePost', `${endpoint}/imagePost/count`, args, options, fetch);
 }
 
-export function useCheckImagePost<TError = DefaultError>(args: { operation: PolicyCrudKind; where?: { id?: string; title?: string; content?: string; published?: boolean; authorId?: string; image?: string }; }, options?: (Omit<UseQueryOptions<boolean, TError, boolean>, 'queryKey'> & ExtraQueryOptions)) {
+export function useCheckImagePost<TError = DefaultError>(args: { operation: PolicyCrudKind; where?: { id?: string; title?: string; content?: string; published?: boolean; authorId?: string; image?: string; eventId?: string }; }, options?: (Omit<UseQueryOptions<boolean, TError, boolean>, 'queryKey'> & ExtraQueryOptions)) {
     const { endpoint, fetch } = getHooksContext();
     return useModelQuery<boolean, boolean, TError>('ImagePost', `${endpoint}/imagePost/check`, args, options, fetch);
 }

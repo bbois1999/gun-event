@@ -1,4 +1,5 @@
 import { Post } from "@/components/Post";
+import { PostButton } from "@/components/PostButton";
 
 // Example posts data - this would normally come from a database
 const examplePosts = [
@@ -35,6 +36,9 @@ export default function Home() {
   return (
     <main className="container mx-auto py-8">
       <div className="flex flex-col items-center gap-6">
+        <div className="w-full max-w-2xl flex justify-end mb-4">
+          <PostButton />
+        </div>
         {examplePosts.map((post, index) => (
           <Post key={index} {...post} />
         ))}

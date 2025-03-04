@@ -1,116 +1,84 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { redirect } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { EventPostFeed } from "@/components/EventPostFeed"
+import { useEffect, useState } from "react"
+import { type Post, type ImagePost } from "@/src/types/models"
+
+type CombinedPost = (Post | ImagePost) & {
+  author: {
+    id: string
+    email: string
+  }
+}
 
 export default function ProfilePage() {
-  const router = useRouter()
   const { data: session, status } = useSession()
-  const [isLoading, setIsLoading] = useState(true)
+  const [posts, setPosts] = useState<CombinedPost[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login")
-    } else if (status === "authenticated") {
-      setIsLoading(false)
+    const fetchUserPosts = async () => {
+      if (!session?.user?.id) return
+      try {
+        const response = await fetch(`/api/users/${session.user.id}/posts`)
+        if (!response.ok) throw new Error('Failed to fetch posts')
+        const data = await response.json()
+        setPosts(data)
+      } catch (error) {
+        console.error('Error fetching posts:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [status, router])
 
-  if (status === "loading" || isLoading) {
+    fetchUserPosts()
+  }, [session?.user?.id])
+
+  if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
   }
 
-  // Ensure we display only when user is authenticated
-  if (!session?.user) {
-    return null
+  if (!session) {
+    redirect("/login")
   }
 
-  const { user } = session
-
   return (
-    <div className="container max-w-4xl mx-auto py-12">
-      <div className="text-center mb-6">
-        <h1 className="text-3xl font-bold">Your Profile</h1>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 justify-items-center">
-        <div className="lg:col-span-2 w-full">
-          <Card className="w-full">
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={user.image || ""} alt={user.name || "User"} />
-                  <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle>{user.name || "User"}</CardTitle>
-                  <CardDescription>{user.email}</CardDescription>
-                </div>
+    <div className="container max-w-4xl mx-auto py-8">
+      <div className="space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <span className="font-semibold">Email:</span> {session.user.email}
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Account Information</h3>
-                  <div className="mt-2 grid grid-cols-1 gap-2 text-sm">
-                    <div className="flex justify-between py-1 border-b">
-                      <span className="font-medium">Email</span>
-                      <span>{user.email}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b">
-                      <span className="font-medium">User ID</span>
-                      <span className="text-muted-foreground">{user.id || "temp-user-id"}</span>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <span className="font-semibold">User ID:</span> {session.user.id}
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button asChild variant="outline">
-                <Link href="/">Back to Home</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/events">My Events</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-        
-        <div className="w-full">
-          <Card className="w-full">
-            <CardHeader>
-              <CardTitle>Account Options</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button className="w-full" variant="outline" asChild>
-                <Link href="/events">
-                  Manage Events
-                </Link>
-              </Button>
-              <Button 
-                className="w-full" 
-                variant="destructive" 
-                onClick={() => {
-                  const confirmed = window.confirm("Are you sure you want to sign out?")
-                  if (confirmed) {
-                    router.push("/api/auth/signout")
-                  }
-                }}
-              >
-                Sign Out
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div>
+          <h2 className="text-2xl font-semibold mb-6">Your Posts</h2>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <EventPostFeed posts={posts} />
+          )}
         </div>
       </div>
     </div>

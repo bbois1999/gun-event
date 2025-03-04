@@ -1,46 +1,90 @@
-import { Post, User } from "@prisma/client"
-import { format } from "date-fns"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+"use client"
 
-interface PostWithAuthor extends Post {
-  author: User
+import { type Post, type ImagePost } from '@/src/types/models'
+import { format } from 'date-fns'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import Image from 'next/image'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Calendar } from 'lucide-react'
+import Link from 'next/link'
+
+type CombinedPost = (Post | ImagePost) & {
+  author: {
+    id: string
+    email: string
+  }
+  event?: {
+    id: string
+    title: string
+  }
 }
 
 interface EventPostFeedProps {
-  posts: PostWithAuthor[]
+  posts: CombinedPost[]
 }
 
 export function EventPostFeed({ posts }: EventPostFeedProps) {
-  if (posts.length === 0) {
+  if (!posts.length) {
     return (
-      <div className="text-center text-muted-foreground py-8">
-        No posts yet. Be the first to post about this event!
+      <div className="text-center text-muted-foreground">
+        No posts yet. Be the first to post in this event!
       </div>
     )
   }
 
+  // Sort posts by creation date, newest first
+  const sortedPosts = [...posts].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
+
   return (
     <div className="space-y-6">
-      {posts.map((post) => (
+      {sortedPosts.map((post) => (
         <Card key={post.id}>
-          <CardHeader className="flex flex-row items-center gap-4 pb-2">
-            <Avatar>
-              <AvatarFallback>
-                {post.author.email?.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="font-semibold">{post.author.email}</span>
-              <span className="text-sm text-muted-foreground">
-                {format(new Date(post.createdAt), "PPP 'at' p")}
-              </span>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <Avatar>
+                <AvatarFallback>
+                  {post.author.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <CardTitle className="text-lg">{post.title}</CardTitle>
+                <div className="text-sm text-muted-foreground">
+                  {post.author.email} • {format(new Date(post.createdAt), 'PPp')}
+                </div>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <h3 className="font-semibold mb-2">{post.title}</h3>
-            <p className="whitespace-pre-wrap text-sm">{post.content}</p>
+            <p className="whitespace-pre-wrap">{post.content}</p>
+            {'image' in post && post.image && (
+              <div className="mt-4 relative aspect-video">
+                <Image
+                  src={post.image}
+                  alt={post.title}
+                  fill
+                  className="object-cover rounded-md"
+                />
+              </div>
+            )}
           </CardContent>
+          {post.event && (
+            <CardFooter>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                asChild
+              >
+                <Link href={`/events/${post.event.id}`}>
+                  <Calendar className="h-4 w-4" />
+                  <span>Posted in: {post.event.title}</span>
+                </Link>
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       ))}
     </div>

@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { PlusCircle, Filter, CalendarIcon, Loader2 } from "lucide-react"
+import { PlusCircle, Filter, CalendarIcon, Clock, Loader2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
+import { format } from "date-fns"
 
 // List of Northwest cities
 const NORTHWEST_CITIES = [
@@ -45,7 +46,7 @@ interface Event {
 }
 
 export default function EventsPage() {
-  const [date, setDate] = useState<Date | undefined>(undefined) // Start with no date selected
+  const [date, setDate] = useState<Date | undefined>(undefined)
   const [selectedCity, setSelectedCity] = useState<string | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [isDateSelected, setIsDateSelected] = useState(false)
@@ -57,10 +58,11 @@ export default function EventsPage() {
     title: "",
     description: "",
     location: NORTHWEST_CITIES[0],
-    organizer: ""
+    organizer: "",
+    time: "12:00" // Default time
   })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectKey, setSelectKey] = useState(0) // Key to force Select component re-render
+  const [selectKey, setSelectKey] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch events from the API on component mount
@@ -100,15 +102,15 @@ export default function EventsPage() {
 
   // Handle date selection and track if user has explicitly selected a date
   const handleDateSelect = (newDate: Date | undefined) => {
-    setDate(newDate);
-    setIsDateSelected(!!newDate);
-  };
+    setDate(newDate)
+    setIsDateSelected(!!newDate)
+  }
 
   // Clear date selection
   const clearDateSelection = () => {
-    setDate(undefined);
-    setIsDateSelected(false);
-  };
+    setDate(undefined)
+    setIsDateSelected(false)
+  }
 
   // Function to handle adding a new event
   const handleAddEvent = async () => {
@@ -116,6 +118,11 @@ export default function EventsPage() {
     
     try {
       setIsSubmitting(true)
+      
+      // Combine the selected date with the time input
+      const [hours, minutes] = newEvent.time.split(':').map(Number)
+      const eventDateTime = new Date(date)
+      eventDateTime.setHours(hours, minutes)
       
       const response = await fetch('/api/events', {
         method: 'POST',
@@ -125,7 +132,7 @@ export default function EventsPage() {
         body: JSON.stringify({
           title: newEvent.title,
           description: newEvent.description,
-          date: date.toISOString(),
+          date: eventDateTime.toISOString(),
           location: newEvent.location,
           organizer: newEvent.organizer
         }),
@@ -148,7 +155,8 @@ export default function EventsPage() {
         title: "",
         description: "",
         location: NORTHWEST_CITIES[0],
-        organizer: ""
+        organizer: "",
+        time: "12:00"
       })
       
       setIsDialogOpen(false)
@@ -175,8 +183,8 @@ export default function EventsPage() {
     : events
 
   // Get current date for filtering upcoming events
-  const now = new Date();
-  now.setHours(0, 0, 0, 0); // Set to beginning of day for fair comparison
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
 
   // Get events based on date selection and filters
   const displayEvents = isDateSelected && date
@@ -189,7 +197,7 @@ export default function EventsPage() {
     // Otherwise, show all upcoming events sorted by date
     : filteredEvents
         .filter(event => event.date >= now) // Only future events
-        .sort((a, b) => a.date.getTime() - b.date.getTime()); // Sort by date ascending
+        .sort((a, b) => a.date.getTime() - b.date.getTime()) // Sort by date ascending
 
   // Get all dates that have events for highlighting on the calendar
   const eventDates = filteredEvents.map(event => {
@@ -203,8 +211,8 @@ export default function EventsPage() {
 
   // Clear filter function
   const clearFilter = () => {
-    setSelectedCity(null);
-    setSelectKey(prev => prev + 1); // Force re-render of Select component
+    setSelectedCity(null)
+    setSelectKey(prev => prev + 1) // Force re-render of Select component
   }
 
   // Create a map of dates that have events (for calendar highlighting)
@@ -215,13 +223,8 @@ export default function EventsPage() {
 
   // Format date for display in event list
   const formatEventDate = (eventDate: Date) => {
-    return eventDate.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  };
+    return format(eventDate, "PPP 'at' p")
+  }
 
   return (
     <main className="container mx-auto py-8 max-w-7xl">
@@ -243,9 +246,9 @@ export default function EventsPage() {
             </CardHeader>
             <CardContent>
               <Select 
-                key={selectKey}
-                value={selectedCity || undefined} 
-                onValueChange={setSelectedCity} 
+                key={selectKey} 
+                value={selectedCity || undefined}
+                onValueChange={setSelectedCity}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a city" />
@@ -260,7 +263,7 @@ export default function EventsPage() {
               </Select>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
@@ -283,7 +286,7 @@ export default function EventsPage() {
                       <DialogHeader>
                         <DialogTitle>Add New Event</DialogTitle>
                         <DialogDescription>
-                          Create a new event for {date?.toLocaleDateString() || "the future"}
+                          Create a new event for {date ? format(date, "PPP") : "the future"}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="grid gap-4 py-4">
@@ -292,7 +295,7 @@ export default function EventsPage() {
                           <Input
                             id="title"
                             value={newEvent.title}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewEvent({...newEvent, title: e.target.value})}
+                            onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
                             placeholder="Event Title"
                           />
                         </div>
@@ -301,9 +304,21 @@ export default function EventsPage() {
                           <Textarea
                             id="description"
                             value={newEvent.description}
-                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewEvent({...newEvent, description: e.target.value})}
+                            onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
                             placeholder="Event Description"
                           />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="time">Time</Label>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="time"
+                              type="time"
+                              value={newEvent.time}
+                              onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
+                            />
+                          </div>
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="location">Location</Label>
@@ -328,7 +343,7 @@ export default function EventsPage() {
                           <Input
                             id="organizer"
                             value={newEvent.organizer}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewEvent({...newEvent, organizer: e.target.value})}
+                            onChange={(e) => setNewEvent({...newEvent, organizer: e.target.value})}
                             placeholder="Event Organizer"
                           />
                         </div>
@@ -353,11 +368,6 @@ export default function EventsPage() {
                   </Dialog>
                 </div>
               </CardTitle>
-              <CardDescription>
-                {selectedCity 
-                  ? `Showing events in ${selectedCity}` 
-                  : "Select a date to view or add events"}
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <Calendar
@@ -382,8 +392,8 @@ export default function EventsPage() {
               <CardTitle>
                 {isDateSelected
                   ? (selectedCity 
-                      ? `Events in ${selectedCity} for ${date?.toLocaleDateString()}` 
-                      : `Events for ${date?.toLocaleDateString()}`)
+                      ? `Events in ${selectedCity} for ${date ? format(date, "PPP") : ""}` 
+                      : `Events for ${date ? format(date, "PPP") : ""}`)
                   : (selectedCity
                       ? `Upcoming Events in ${selectedCity}`
                       : "All Upcoming Events")

@@ -89,6 +89,20 @@ const metadata = {
                     type: "String",
                     isForeignKey: true,
                     relationField: 'author',
+                }, event: {
+                    name: "event",
+                    type: "Event",
+                    isDataModel: true,
+                    isOptional: true,
+                    backLink: 'posts',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "eventId" },
+                }, eventId: {
+                    name: "eventId",
+                    type: "String",
+                    isOptional: true,
+                    isForeignKey: true,
+                    relationField: 'event',
                 },
             }
             , uniqueConstraints: {
@@ -140,6 +154,20 @@ const metadata = {
                 }, image: {
                     name: "image",
                     type: "String",
+                }, event: {
+                    name: "event",
+                    type: "Event",
+                    isDataModel: true,
+                    isOptional: true,
+                    backLink: 'imagePosts',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "eventId" },
+                }, eventId: {
+                    name: "eventId",
+                    type: "String",
+                    isOptional: true,
+                    isForeignKey: true,
+                    relationField: 'event',
                 },
             }
             , uniqueConstraints: {
@@ -193,6 +221,18 @@ const metadata = {
                     type: "String",
                     isForeignKey: true,
                     relationField: 'author',
+                }, posts: {
+                    name: "posts",
+                    type: "Post",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'event',
+                }, imagePosts: {
+                    name: "imagePosts",
+                    type: "ImagePost",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'event',
                 },
             }
             , uniqueConstraints: {
