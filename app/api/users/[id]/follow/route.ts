@@ -15,7 +15,13 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const targetUserId = params.id
+    // Properly await params before accessing its properties
+    const resolvedParams = await Promise.resolve(params)
+    const targetUserId = resolvedParams.id
+    
+    if (!targetUserId) {
+      return NextResponse.json({ error: 'Missing user ID' }, { status: 400 })
+    }
     
     // Get the current user's ID
     const currentUser = await prisma.user.findUnique({
@@ -71,11 +77,19 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 })
+    
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const userIdToUnfollow = params.id
+    // Properly await params before accessing its properties
+    const resolvedParams = await Promise.resolve(params)
+    const targetUserId = resolvedParams.id
+    
+    if (!targetUserId) {
+      return NextResponse.json({ error: 'Missing user ID' }, { status: 400 })
+    }
+    
     const currentUserId = session.user.id
 
     // Check if follow relationship exists
@@ -83,7 +97,7 @@ export async function DELETE(
       where: {
         followerId_followedId: {
           followerId: currentUserId,
-          followedId: userIdToUnfollow
+          followedId: targetUserId
         }
       }
     })
@@ -97,7 +111,7 @@ export async function DELETE(
       where: {
         followerId_followedId: {
           followerId: currentUserId,
-          followedId: userIdToUnfollow
+          followedId: targetUserId
         }
       }
     })

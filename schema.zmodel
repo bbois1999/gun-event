@@ -30,11 +30,73 @@ model User {
     followedBy Follow[] @relation("follower")
     following  Follow[] @relation("following")
     
+    // Likes relationships
+    likes      Like[]
+    
+    // Notifications
+    notifications      Notification[] @relation("userNotifications")
+    notificationsSent  Notification[] @relation("notificationSender")
+    
     // everybody can signup
     @@allow('create', true)
 
     // full access by self
     @@allow('all', auth() == this)
+}
+
+/// Like model for post likes
+model Like {
+    id         String   @id @default(cuid())
+    createdAt  DateTime @default(now())
+    
+    // User who liked the post
+    user       User     @relation(fields: [userId], references: [id])
+    userId     String
+    
+    // Post that was liked (can be null if it was an ImagePost)
+    post       Post?    @relation(fields: [postId], references: [id])
+    postId     String?
+    
+    // ImagePost that was liked (can be null if it was a regular Post)
+    imagePost  ImagePost? @relation(fields: [imagePostId], references: [id])
+    imagePostId String?
+    
+    // Ensure a user can only like a post once
+    @@unique([userId, postId])
+    @@unique([userId, imagePostId])
+    
+    // Allow a user to like/unlike posts
+    @@allow('create,delete', auth() == user)
+    
+    // Allow read access to post author and the liker
+    @@allow('read', post.author == auth() || imagePost.author == auth() || user == auth())
+}
+
+/// Notification model
+model Notification {
+    id         String   @id @default(cuid())
+    createdAt  DateTime @default(now())
+    read       Boolean  @default(false)
+    type       String   // e.g., "like", "follow", "comment"
+    message    String
+    
+    // Link to the related content
+    postId     String?  // Optional: ID of the related post
+    imagePostId String? // Optional: ID of the related image post
+    
+    // User who receives the notification
+    user       User     @relation("userNotifications", fields: [userId], references: [id])
+    userId     String
+    
+    // User who triggered the notification (e.g., who liked the post)
+    sender     User?    @relation("notificationSender", fields: [senderId], references: [id])
+    senderId   String?
+    
+    // Allow the recipient to read and update their notifications
+    @@allow('read,update', user == auth())
+    
+    // Allow creation by the system (null check) or the sender
+    @@allow('create', auth() == null || sender == auth())
 }
 
 /// Follow relationship model
@@ -73,7 +135,8 @@ model Post {
     authorId  String
     event     Event?   @relation(fields: [eventId], references: [id])
     eventId   String?
-
+    likes     Like[]   // Relation to likes
+    
     // allow read for all signin users
     @@allow('read', auth() != null && published)
 
@@ -94,6 +157,7 @@ model ImagePost {
     image     String
     event     Event?   @relation(fields: [eventId], references: [id])
     eventId   String?
+    likes     Like[]   // Relation to likes
     
     // allow read for all signin users
     @@allow('read', auth() != null && published)

@@ -13,7 +13,14 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    const userId = params.id
+    // Properly await params before accessing its properties
+    const resolvedParams = await Promise.resolve(params)
+    const userId = resolvedParams.id
+    
+    if (!userId) {
+      return new NextResponse('Missing user ID', { status: 400 })
+    }
+    
     const currentUserId = session.user.id
 
     // Get followers count

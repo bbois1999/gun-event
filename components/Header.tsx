@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { User } from "lucide-react";
+import { NotificationsDropdown } from "./NotificationsDropdown";
 
 export function Header() {
   const { data: session, status } = useSession();
@@ -42,6 +43,12 @@ export function Header() {
             <Link href="/explore" className="transition-colors hover:text-foreground/80">
               Explore
             </Link>
+          )}
+          
+          {isAuthenticated && (
+            <div className="flex items-center ml-auto">
+              <NotificationsDropdown />
+            </div>
           )}
           
           {isAuthenticated ? (

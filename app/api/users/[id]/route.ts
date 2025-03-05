@@ -13,7 +13,12 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    const userId = params.id
+    const resolvedParams = await Promise.resolve(params)
+    const userId = resolvedParams.id
+
+    if (!userId) {
+      return new NextResponse('Missing user ID', { status: 400 })
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

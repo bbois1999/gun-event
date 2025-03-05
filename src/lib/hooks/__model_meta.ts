@@ -50,6 +50,24 @@ const metadata = {
                     isDataModel: true,
                     isArray: true,
                     backLink: 'follower',
+                }, likes: {
+                    name: "likes",
+                    type: "Like",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'user',
+                }, notifications: {
+                    name: "notifications",
+                    type: "Notification",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'user',
+                }, notificationsSent: {
+                    name: "notificationsSent",
+                    type: "Notification",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'sender',
                 },
             }
             , uniqueConstraints: {
@@ -59,6 +77,140 @@ const metadata = {
                 }, email: {
                     name: "email",
                     fields: ["email"]
+                },
+            }
+            ,
+        }
+        ,
+        like: {
+            name: 'Like', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, user: {
+                    name: "user",
+                    type: "User",
+                    isDataModel: true,
+                    backLink: 'likes',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "userId" },
+                }, userId: {
+                    name: "userId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'user',
+                }, post: {
+                    name: "post",
+                    type: "Post",
+                    isDataModel: true,
+                    isOptional: true,
+                    backLink: 'likes',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "postId" },
+                }, postId: {
+                    name: "postId",
+                    type: "String",
+                    isOptional: true,
+                    isForeignKey: true,
+                    relationField: 'post',
+                }, imagePost: {
+                    name: "imagePost",
+                    type: "ImagePost",
+                    isDataModel: true,
+                    isOptional: true,
+                    backLink: 'likes',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "imagePostId" },
+                }, imagePostId: {
+                    name: "imagePostId",
+                    type: "String",
+                    isOptional: true,
+                    isForeignKey: true,
+                    relationField: 'imagePost',
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                }, userId_postId: {
+                    name: "userId_postId",
+                    fields: ["userId", "postId"]
+                }, userId_imagePostId: {
+                    name: "userId_imagePostId",
+                    fields: ["userId", "imagePostId"]
+                },
+            }
+            ,
+        }
+        ,
+        notification: {
+            name: 'Notification', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, read: {
+                    name: "read",
+                    type: "Boolean",
+                    attributes: [{ "name": "@default", "args": [{ "value": false }] }],
+                }, type: {
+                    name: "type",
+                    type: "String",
+                }, message: {
+                    name: "message",
+                    type: "String",
+                }, postId: {
+                    name: "postId",
+                    type: "String",
+                    isOptional: true,
+                }, imagePostId: {
+                    name: "imagePostId",
+                    type: "String",
+                    isOptional: true,
+                }, user: {
+                    name: "user",
+                    type: "User",
+                    isDataModel: true,
+                    backLink: 'notifications',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "userId" },
+                }, userId: {
+                    name: "userId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'user',
+                }, sender: {
+                    name: "sender",
+                    type: "User",
+                    isDataModel: true,
+                    isOptional: true,
+                    backLink: 'notificationsSent',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "senderId" },
+                }, senderId: {
+                    name: "senderId",
+                    type: "String",
+                    isOptional: true,
+                    isForeignKey: true,
+                    relationField: 'sender',
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
                 },
             }
             ,
@@ -168,6 +320,12 @@ const metadata = {
                     isOptional: true,
                     isForeignKey: true,
                     relationField: 'event',
+                }, likes: {
+                    name: "likes",
+                    type: "Like",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'post',
                 },
             }
             , uniqueConstraints: {
@@ -233,6 +391,12 @@ const metadata = {
                     isOptional: true,
                     isForeignKey: true,
                     relationField: 'event',
+                }, likes: {
+                    name: "likes",
+                    type: "Like",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'imagePost',
                 },
             }
             , uniqueConstraints: {

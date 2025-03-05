@@ -6,6 +6,8 @@
 // @ts-nocheck
 
 export * from './user';
+export * from './like';
+export * from './notification';
 export * from './follow';
 export * from './post';
 export * from './image-post';

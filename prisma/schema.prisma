@@ -14,14 +14,47 @@ generator client {
 
 /// User model
 model User {
-  id         String      @id() @default(cuid())
-  email      String      @unique()
-  password   String
-  posts      Post[]
-  imagePosts ImagePost[]
-  events     Event[]
-  followedBy Follow[]    @relation("follower")
-  following  Follow[]    @relation("following")
+  id                String         @id() @default(cuid())
+  email             String         @unique()
+  password          String
+  posts             Post[]
+  imagePosts        ImagePost[]
+  events            Event[]
+  followedBy        Follow[]       @relation("follower")
+  following         Follow[]       @relation("following")
+  likes             Like[]
+  notifications     Notification[] @relation("userNotifications")
+  notificationsSent Notification[] @relation("notificationSender")
+}
+
+/// Like model for post likes
+model Like {
+  id          String     @id() @default(cuid())
+  createdAt   DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id])
+  userId      String
+  post        Post?      @relation(fields: [postId], references: [id])
+  postId      String?
+  imagePost   ImagePost? @relation(fields: [imagePostId], references: [id])
+  imagePostId String?
+
+  @@unique([userId, postId])
+  @@unique([userId, imagePostId])
+}
+
+/// Notification model
+model Notification {
+  id          String   @id() @default(cuid())
+  createdAt   DateTime @default(now())
+  read        Boolean  @default(false)
+  type        String
+  message     String
+  postId      String?
+  imagePostId String?
+  user        User     @relation("userNotifications", fields: [userId], references: [id])
+  userId      String
+  sender      User?    @relation("notificationSender", fields: [senderId], references: [id])
+  senderId    String?
 }
 
 /// Follow relationship model
@@ -49,6 +82,7 @@ model Post {
   authorId  String
   event     Event?   @relation(fields: [eventId], references: [id])
   eventId   String?
+  likes     Like[]
 }
 
 model ImagePost {
@@ -63,6 +97,7 @@ model ImagePost {
   image     String
   event     Event?   @relation(fields: [eventId], references: [id])
   eventId   String?
+  likes     Like[]
 }
 
 /// Gun Show Event model

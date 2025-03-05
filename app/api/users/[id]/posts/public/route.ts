@@ -13,12 +13,20 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
+    // Properly await params before accessing its properties
+    const resolvedParams = await Promise.resolve(params)
+    const userId = resolvedParams.id
+    
+    if (!userId) {
+      return new NextResponse('Missing user ID', { status: 400 })
+    }
+
     // Fetch both regular posts and image posts with their associated events
     // Only fetch published posts for public viewing
     const [posts, imagePosts] = await Promise.all([
       prisma.post.findMany({
         where: {
-          authorId: params.id,
+          authorId: userId,
           published: true
         },
         include: {
@@ -41,7 +49,7 @@ export async function GET(
       }),
       prisma.imagePost.findMany({
         where: {
-          authorId: params.id,
+          authorId: userId,
           published: true
         },
         include: {

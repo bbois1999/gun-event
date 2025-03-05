@@ -34,21 +34,24 @@ export default function UserProfilePage({ params }: UserPageProps) {
   const [followLoading, setFollowLoading] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
   
-  const isOwnProfile = session?.user?.id === params.id
+  // Get userId directly from params instead of using use()
+  const userId = params.id
+  
+  const isOwnProfile = session?.user?.id === userId
   
   // Redirect to profile page if viewing own profile
   useEffect(() => {
     if (isOwnProfile) {
       router.push('/profile')
     }
-  }, [isOwnProfile, router])
+  }, [isOwnProfile, router, session?.user?.id, userId])
 
   // Fetch user data
   useEffect(() => {
     const fetchUser = async () => {
-      if (!params.id) return
+      if (!userId) return
       try {
-        const response = await fetch(`/api/users/${params.id}`)
+        const response = await fetch(`/api/users/${userId}`)
         if (!response.ok) {
           if (response.status === 404) {
             router.push('/404')
@@ -69,14 +72,14 @@ export default function UserProfilePage({ params }: UserPageProps) {
     }
 
     fetchUser()
-  }, [params.id, router, toast])
+  }, [userId])
 
   // Fetch user posts
   useEffect(() => {
     const fetchUserPosts = async () => {
-      if (!params.id) return
+      if (!userId) return
       try {
-        const response = await fetch(`/api/users/${params.id}/posts/public`)
+        const response = await fetch(`/api/users/${userId}/posts/public`)
         if (!response.ok) throw new Error('Failed to fetch posts')
         const data = await response.json()
         setPosts(data)
@@ -88,15 +91,15 @@ export default function UserProfilePage({ params }: UserPageProps) {
     }
 
     fetchUserPosts()
-  }, [params.id])
+  }, [userId])
 
   // Check if current user is following this user
   useEffect(() => {
     const checkFollowStatus = async () => {
-      if (!session?.user || !params.id) return
+      if (!session?.user || !userId) return
       
       try {
-        const response = await fetch(`/api/users/${params.id}/followers`)
+        const response = await fetch(`/api/users/${userId}/followers`)
         if (!response.ok) throw new Error('Failed to fetch followers')
         const data = await response.json()
         
@@ -108,7 +111,7 @@ export default function UserProfilePage({ params }: UserPageProps) {
     }
 
     checkFollowStatus()
-  }, [session?.user, params.id])
+  }, [session?.user, userId])
 
   const handleFollowToggle = async () => {
     if (!session?.user) {
@@ -118,9 +121,8 @@ export default function UserProfilePage({ params }: UserPageProps) {
 
     setFollowLoading(true)
     try {
-      const method = isFollowing ? 'DELETE' : 'POST'
-      const response = await fetch(`/api/users/${params.id}/follow`, {
-        method,
+      const response = await fetch(`/api/users/${userId}/follow`, {
+        method: isFollowing ? 'DELETE' : 'POST',
         headers: {
           'Content-Type': 'application/json'
         }
