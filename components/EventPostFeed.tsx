@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import Image from 'next/image'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Calendar, Heart, MessageCircle } from 'lucide-react'
+import { Calendar, Heart } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
@@ -262,7 +262,9 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <CardTitle className="text-lg">{post.title}</CardTitle>
+                <Link href={`/posts/${post.id}`} className="hover:underline">
+                  <CardTitle className="text-lg">{post.title}</CardTitle>
+                </Link>
                 <div className="text-sm text-muted-foreground">
                   {post.author.email} • {format(new Date(post.createdAt), 'PPp')}
                 </div>
@@ -270,6 +272,15 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
             </div>
           </CardHeader>
           <CardContent>
+            {post.event && (
+              <div className="px-4 py-2 mb-4 bg-muted rounded-md flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span className="font-medium">Found at: </span>
+                <Link href={`/events/${post.event.id}`} className="ml-1 text-primary hover:underline">
+                  {post.event.title}
+                </Link>
+              </div>
+            )}
             <p className="whitespace-pre-wrap">{post.content}</p>
             {/* Check if there's an image in either Post or ImagePost */}
             {(('image' in post && post.image) || (post as any).image) && (
@@ -319,15 +330,6 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
                   likedPosts[post.id] ? "fill-current" : "fill-none"
                 )} />
                 <span>{likeCount[post.id] || 0}</span>
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span>0</span>
               </Button>
             </div>
             

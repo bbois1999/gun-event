@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,8 +24,11 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [followLoading, setFollowLoading] = useState<Record<string, boolean>>({})
+  const initialized = useRef(false)
 
   useEffect(() => {
+    if (initialized.current) return;
+    
     const fetchUsers = async () => {
       try {
         const response = await fetch('/api/users/explore')
@@ -45,6 +48,7 @@ export default function ExplorePage() {
     }
 
     if (session?.user) {
+      initialized.current = true;
       fetchUsers()
     } else if (status !== "loading") {
       router.push('/login')
