@@ -16,7 +16,13 @@ generator client {
 model User {
   id                String         @id() @default(cuid())
   email             String         @unique()
-  password          String
+  username          String         @unique()
+  phoneNumber       String         @unique()
+  verifiedEmail     Boolean        @default(false)
+  verifiedPhone     Boolean        @default(false)
+  preferredMfa      String         @default("email")
+  otpSecret         String?
+  otpExpiry         DateTime?
   posts             Post[]
   imagePosts        ImagePost[]
   events            Event[]

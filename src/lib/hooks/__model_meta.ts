@@ -17,9 +17,32 @@ const metadata = {
                 }, email: {
                     name: "email",
                     type: "String",
-                }, password: {
-                    name: "password",
+                }, username: {
+                    name: "username",
                     type: "String",
+                }, phoneNumber: {
+                    name: "phoneNumber",
+                    type: "String",
+                }, verifiedEmail: {
+                    name: "verifiedEmail",
+                    type: "Boolean",
+                    attributes: [{ "name": "@default", "args": [{ "value": false }] }],
+                }, verifiedPhone: {
+                    name: "verifiedPhone",
+                    type: "Boolean",
+                    attributes: [{ "name": "@default", "args": [{ "value": false }] }],
+                }, preferredMfa: {
+                    name: "preferredMfa",
+                    type: "String",
+                    attributes: [{ "name": "@default", "args": [{ "value": "email" }] }],
+                }, otpSecret: {
+                    name: "otpSecret",
+                    type: "String",
+                    isOptional: true,
+                }, otpExpiry: {
+                    name: "otpExpiry",
+                    type: "DateTime",
+                    isOptional: true,
                 }, posts: {
                     name: "posts",
                     type: "Post",
@@ -77,6 +100,12 @@ const metadata = {
                 }, email: {
                     name: "email",
                     fields: ["email"]
+                }, username: {
+                    name: "username",
+                    fields: ["username"]
+                }, phoneNumber: {
+                    name: "phoneNumber",
+                    fields: ["phoneNumber"]
                 },
             }
             ,

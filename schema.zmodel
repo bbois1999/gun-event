@@ -19,12 +19,18 @@ plugin hooks {
 
 /// User model
 model User {
-    id       String @id @default(cuid())
-    email    String @unique @email @length(6, 32)
-    password String @password @omit
-    posts    Post[]
-    imagePosts ImagePost[]
-    events    Event[]  // User can create events
+    id             String @id @default(cuid())
+    email          String @unique @email @length(6, 32)
+    username       String @unique @length(3, 20)
+    phoneNumber    String @unique
+    verifiedEmail  Boolean @default(false)
+    verifiedPhone  Boolean @default(false)
+    preferredMfa   String @default("email") // "email" or "phone"
+    otpSecret      String?  // For storing current OTP
+    otpExpiry      DateTime? // OTP expiration timestamp
+    posts          Post[]
+    imagePosts     ImagePost[]
+    events         Event[]  // User can create events
     
     // Follow relationships
     followedBy Follow[] @relation("follower")

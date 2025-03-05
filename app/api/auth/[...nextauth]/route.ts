@@ -1,9 +1,15 @@
 import { NextAuthOptions } from "next-auth";
-import NextAuth from "next-auth/next";
+import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { verifyOTP } from "@/lib/auth/otp";
+
+// Utility function to normalize phone numbers
+const normalizePhoneNumber = (value: string) => {
+  // Remove all non-numeric characters
+  return value.replace(/\D/g, '');
+};
 
 // Add custom properties to the session user
 declare module "next-auth" {
@@ -13,6 +19,8 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      username?: string | null;
+      phoneNumber?: string | null;
     }
   }
 }
@@ -22,31 +30,62 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: "OTP",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        identifier: { label: "Email or Phone", type: "text", placeholder: "email@example.com or (123) 456-7890" },
+        otp: { label: "Verification Code", type: "text" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.identifier || !credentials?.otp) {
           return null;
         }
 
-        // Find user by email
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
+        try {
+          const isEmail = credentials.identifier.includes('@');
+          
+          // Normalize phone number if needed
+          const normalizedIdentifier = isEmail 
+            ? credentials.identifier 
+            : normalizePhoneNumber(credentials.identifier);
+          
+          // Find user based on identifier type
+          const user = await prisma.user.findFirst({
+            where: isEmail 
+              ? { email: normalizedIdentifier } 
+              : { phoneNumber: normalizedIdentifier },
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              phoneNumber: true,
+              otpSecret: true,
+              otpExpiry: true
+            }
+          });
 
-        // If no user found or password doesn't match
-        if (!user || !(await bcrypt.compare(credentials.password, user.password))) {
+          if (!user) {
+            console.log("User not found for identifier:", normalizedIdentifier);
+            return null;
+          }
+
+          // Verify OTP
+          const isValidOTP = await verifyOTP(user.id, credentials.otp);
+          
+          if (!isValidOTP) {
+            console.log("Invalid OTP for user:", user.id);
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            phoneNumber: user.phoneNumber
+          };
+        } catch (error) {
+          console.error("Authentication error:", error);
           return null;
         }
-
-        // Return user data for the session
-        return {
-          id: user.id,
-          email: user.email,
-        };
       }
     })
   ],
@@ -61,14 +100,16 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.email = user.email;
+        token.username = user.username;
+        token.phoneNumber = user.phoneNumber;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (token) {
         session.user.id = token.id as string;
-        session.user.email = token.email as string;
+        session.user.username = token.username as string;
+        session.user.phoneNumber = token.phoneNumber as string;
       }
       return session;
     }
