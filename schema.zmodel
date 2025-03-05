@@ -25,11 +25,39 @@ model User {
     posts    Post[]
     imagePosts ImagePost[]
     events    Event[]  // User can create events
+    
+    // Follow relationships
+    followedBy Follow[] @relation("follower")
+    following  Follow[] @relation("following")
+    
     // everybody can signup
     @@allow('create', true)
 
     // full access by self
     @@allow('all', auth() == this)
+}
+
+/// Follow relationship model
+model Follow {
+    id         String   @id @default(cuid())
+    createdAt  DateTime @default(now())
+    
+    // The user being followed
+    followedId String
+    followed   User     @relation("follower", fields: [followedId], references: [id])
+    
+    // The user who is following
+    followerId String
+    follower   User     @relation("following", fields: [followerId], references: [id])
+    
+    // Prevent duplicate follow relationships
+    @@unique([followerId, followedId])
+    
+    // Allow a user to follow and unfollow others
+    @@allow('create,delete', auth() == follower)
+    
+    // Allow both users to read the relationship
+    @@allow('read', auth() == follower || auth() == followed)
 }
 
 /// Post model

@@ -38,6 +38,18 @@ const metadata = {
                     isDataModel: true,
                     isArray: true,
                     backLink: 'author',
+                }, followedBy: {
+                    name: "followedBy",
+                    type: "Follow",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'followed',
+                }, following: {
+                    name: "following",
+                    type: "Follow",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'follower',
                 },
             }
             , uniqueConstraints: {
@@ -47,6 +59,55 @@ const metadata = {
                 }, email: {
                     name: "email",
                     fields: ["email"]
+                },
+            }
+            ,
+        }
+        ,
+        follow: {
+            name: 'Follow', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, followedId: {
+                    name: "followedId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'followed',
+                }, followed: {
+                    name: "followed",
+                    type: "User",
+                    isDataModel: true,
+                    backLink: 'followedBy',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "followedId" },
+                }, followerId: {
+                    name: "followerId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'follower',
+                }, follower: {
+                    name: "follower",
+                    type: "User",
+                    isDataModel: true,
+                    backLink: 'following',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "followerId" },
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                }, followerId_followedId: {
+                    name: "followerId_followedId",
+                    fields: ["followerId", "followedId"]
                 },
             }
             ,

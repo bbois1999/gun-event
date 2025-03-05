@@ -38,6 +38,12 @@ export function Header() {
             Events
           </Link>
           
+          {isAuthenticated && (
+            <Link href="/explore" className="transition-colors hover:text-foreground/80">
+              Explore
+            </Link>
+          )}
+          
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

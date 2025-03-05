@@ -1,48 +1,117 @@
-import { Post } from "@/components/Post";
-import { PostButton } from "@/components/PostButton";
+"use client"
 
-// Example posts data - this would normally come from a database
-const examplePosts = [
-  {
-    username: "JohnDoe",
-    userAvatar: "https://api.dicebear.com/7.x/avatars/svg?seed=John",
-    timestamp: "2 hours ago",
-    content: "Looking forward to the upcoming gun show in Dallas! Will be bringing my collection of vintage rifles. Anyone else planning to attend?",
-    imageUrl: "https://images.unsplash.com/photo-1584727638096-042c45049ebe?w=800&auto=format",
-    likes: 42,
-    comments: 12,
-  },
-  {
-    username: "GunCollector",
-    userAvatar: "https://api.dicebear.com/7.x/avatars/svg?seed=Collector",
-    timestamp: "5 hours ago",
-    content: "Just restored this beautiful 1911. Can't wait to showcase it at next month's event!",
-    imageUrl: "https://images.unsplash.com/photo-1595590424283-b8f17842773f?w=800&auto=format",
-    likes: 89,
-    comments: 24,
-  },
-  {
-    username: "FirearmEnthusiast",
-    userAvatar: "https://api.dicebear.com/7.x/avatars/svg?seed=Enthusiast",
-    timestamp: "1 day ago",
-    content: "Great turnout at yesterday's show! Thanks to everyone who stopped by my booth. Here's a sneak peek of what I'll be bringing next time.",
-    imageUrl: "https://images.unsplash.com/photo-1584727638094-80524dfc771e?w=800&auto=format",
-    likes: 156,
-    comments: 32,
-  },
-];
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { PostButton } from "@/components/PostButton"
+import { EventPostFeed } from "@/components/EventPostFeed"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Loader2 } from "lucide-react"
+import { type Post, type ImagePost } from "@/src/types/models"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
+
+type CombinedPost = (Post | ImagePost) & {
+  author: {
+    id: string
+    email: string
+  }
+  event?: {
+    id: string
+    title: string
+  }
+}
 
 export default function Home() {
+  const { data: session, status } = useSession()
+  const [posts, setPosts] = useState<CombinedPost[]>([])
+  const [followingPosts, setFollowingPosts] = useState<CombinedPost[]>([])
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("all")
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        // Fetch all posts
+        const response = await fetch('/api/posts/feed')
+        if (!response.ok) throw new Error('Failed to fetch posts')
+        const data = await response.json()
+        setPosts(data)
+
+        // If user is logged in, fetch posts from followed users
+        if (session?.user) {
+          const followingResponse = await fetch('/api/posts/following')
+          if (followingResponse.ok) {
+            const followingData = await followingResponse.json()
+            setFollowingPosts(followingData)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching posts:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPosts()
+  }, [session])
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
   return (
-    <main className="container mx-auto py-8">
-      <div className="flex flex-col items-center gap-6">
-        <div className="w-full max-w-2xl flex justify-end mb-4">
+    <main className="container max-w-4xl mx-auto py-8">
+      <div className="flex flex-col gap-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Gun Event Feed</h1>
           <PostButton />
         </div>
-        {examplePosts.map((post, index) => (
-          <Post key={index} {...post} />
-        ))}
+
+        {session?.user ? (
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="all">All Posts</TabsTrigger>
+              <TabsTrigger value="following">Following</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all" className="mt-6">
+              {posts.length > 0 ? (
+                <EventPostFeed posts={posts} />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No posts available. Be the first to create a post!
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="following" className="mt-6">
+              {followingPosts.length > 0 ? (
+                <EventPostFeed posts={followingPosts} />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground space-y-4">
+                  <p>You're not following anyone yet, or the people you follow haven't posted anything.</p>
+                  <p>Explore users and their posts to find people to follow!</p>
+                  <Button asChild>
+                    <Link href="/explore">Explore Users</Link>
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div>
+            {posts.length > 0 ? (
+              <EventPostFeed posts={posts} />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No posts available. Sign in to create a post!
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </main>
-  );
+  )
 }

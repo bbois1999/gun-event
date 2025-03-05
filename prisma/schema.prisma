@@ -20,6 +20,20 @@ model User {
   posts      Post[]
   imagePosts ImagePost[]
   events     Event[]
+  followedBy Follow[]    @relation("follower")
+  following  Follow[]    @relation("following")
+}
+
+/// Follow relationship model
+model Follow {
+  id         String   @id() @default(cuid())
+  createdAt  DateTime @default(now())
+  followedId String
+  followed   User     @relation("follower", fields: [followedId], references: [id])
+  followerId String
+  follower   User     @relation("following", fields: [followerId], references: [id])
+
+  @@unique([followerId, followedId])
 }
 
 /// Post model
