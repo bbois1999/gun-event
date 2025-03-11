@@ -10,6 +10,14 @@ const normalizePhoneNumber = (value: string) => {
   return value.replace(/\D/g, '');
 };
 
+// Function to ensure phone number is in E.164 format
+const formatPhoneForStorage = (phoneNumber: string): string => {
+  const normalized = normalizePhoneNumber(phoneNumber);
+  // If not already in proper format, add +1 (US) prefix
+  return normalized.startsWith('+') ? normalized : 
+         normalized.startsWith('1') ? `+${normalized}` : `+1${normalized}`;
+};
+
 // Add custom properties to the session user
 declare module "next-auth" {
   interface Session {
@@ -44,18 +52,20 @@ export const authOptions: NextAuthOptions = {
         try {
           const isEmail = credentials.identifier.includes('@');
           
-          // Normalize phone number if needed
-          const normalizedIdentifier = isEmail 
-            ? credentials.identifier 
-            : normalizePhoneNumber(credentials.identifier);
+          // Normalize and format phone number if needed
+          let formattedIdentifier = credentials.identifier;
+          if (!isEmail) {
+            // Ensure proper E.164 format for phone lookup
+            formattedIdentifier = formatPhoneForStorage(credentials.identifier);
+          }
           
-          console.log("Looking for user with identifier:", normalizedIdentifier);
+          console.log("Looking for user with identifier:", formattedIdentifier);
           
           // Find user based on identifier type
           const user = await prisma.user.findFirst({
             where: isEmail 
-              ? { email: normalizedIdentifier } 
-              : { phoneNumber: normalizedIdentifier },
+              ? { email: formattedIdentifier } 
+              : { phoneNumber: formattedIdentifier },
             select: {
               id: true,
               email: true,
@@ -67,7 +77,51 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user) {
-            console.log("User not found for identifier:", normalizedIdentifier);
+            console.log("User not found for identifier:", formattedIdentifier);
+            // Try a second lookup with just the numeric part for phone
+            if (!isEmail) {
+              const numericPhoneOnly = normalizePhoneNumber(credentials.identifier);
+              console.log("Trying alternative phone lookup:", numericPhoneOnly);
+              
+              const phoneUser = await prisma.user.findFirst({
+                where: {
+                  OR: [
+                    { phoneNumber: `+${numericPhoneOnly}` },
+                    { phoneNumber: `+1${numericPhoneOnly}` },
+                    { phoneNumber: numericPhoneOnly }
+                  ]
+                },
+                select: {
+                  id: true,
+                  email: true,
+                  username: true,
+                  phoneNumber: true,
+                  otpSecret: true,
+                  otpExpiry: true
+                }
+              });
+              
+              if (phoneUser) {
+                console.log("User found with alternative phone format:", phoneUser.id);
+                // Verify OTP for the found user
+                const isValidOTP = await verifyOTP(phoneUser.id, credentials.otp);
+                
+                if (!isValidOTP) {
+                  console.log("Invalid OTP for user:", phoneUser.id);
+                  return null;
+                }
+                
+                console.log("OTP verified successfully for user:", phoneUser.id);
+                
+                // Return user data
+                return {
+                  id: phoneUser.id,
+                  email: phoneUser.email,
+                  username: phoneUser.username,
+                  phoneNumber: phoneUser.phoneNumber
+                };
+              }
+            }
             return null;
           }
 

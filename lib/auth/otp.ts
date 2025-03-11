@@ -1,5 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import { sendSMS } from '@/lib/twilio';
+import twilio from "twilio";
+
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+const VERIFY_SERVICE_SID = process.env.TWILIO_VERIFY_SERVICE_SID;
 
 /**
  * Generates a random OTP code
@@ -41,37 +49,88 @@ export async function setOTPForUser(userId: string): Promise<string> {
  * @returns Whether the OTP is valid
  */
 export async function verifyOTP(userId: string, otp: string): Promise<boolean> {
-  // Get the user's OTP info
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { otpSecret: true, otpExpiry: true }
-  });
-  
-  if (!user || !user.otpSecret || !user.otpExpiry) {
-    return false;
-  }
-  
-  // Check if OTP has expired
-  const now = new Date();
-  if (now > user.otpExpiry) {
-    return false;
-  }
-  
-  // Check if OTP matches
-  const isValid = user.otpSecret === otp;
-  
-  if (isValid) {
-    // Clear the OTP after successful verification
-    await prisma.user.update({
+  try {
+    // Get the user with contact information
+    const user = await prisma.user.findUnique({
       where: { id: userId },
-      data: {
-        otpSecret: null,
-        otpExpiry: null
+      select: { 
+        email: true, 
+        phoneNumber: true,
+        otpSecret: true, 
+        otpExpiry: true 
       }
     });
+    
+    if (!user || !user.otpExpiry) {
+      console.log("No user found or OTP expired");
+      return false;
+    }
+    
+    // Check if OTP has expired
+    const now = new Date();
+    if (now > user.otpExpiry) {
+      console.log("OTP expired");
+      return false;
+    }
+    
+    // Get the contact information to check against Twilio
+    const contactInfo = user.phoneNumber || user.email;
+    
+    if (!contactInfo) {
+      console.log("No contact info found for user");
+      return false;
+    }
+    
+    console.log(`Verifying OTP for ${contactInfo} with code ${otp}`);
+    
+    // Use Twilio Verify to check the code
+    try {
+      const verificationCheck = await client.verify.v2
+        .services(VERIFY_SERVICE_SID!)
+        .verificationChecks.create({
+          to: contactInfo,
+          code: otp
+        });
+      
+      const isValid = verificationCheck.status === 'approved';
+      console.log(`Twilio verification result: ${verificationCheck.status}`);
+      
+      if (isValid) {
+        // Clear the OTP after successful verification
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            otpSecret: null,
+            otpExpiry: null
+          }
+        });
+      }
+      
+      return isValid;
+    } catch (twilioError) {
+      console.error("Twilio verification error:", twilioError);
+      
+      // Fall back to direct OTP check if Twilio fails
+      const isValid = user.otpSecret === otp;
+      console.log(`Fallback to direct OTP check: ${isValid}`);
+      
+      if (isValid) {
+        // Clear the OTP after successful verification
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            otpSecret: null,
+            otpExpiry: null
+          }
+        });
+      }
+      
+      return isValid;
+    }
+  } catch (error) {
+    console.error("OTP verification error:", error);
+    return false;
   }
-  
-  return isValid;
 }
 
 /**

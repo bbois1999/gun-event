@@ -1,11 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { setOTPForUser, sendEmailOTP, sendSMSOTP } from "@/lib/auth/otp";
+import twilio from "twilio";
 
-// Utility function to normalize phone numbers
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+const VERIFY_SERVICE_SID = process.env.TWILIO_VERIFY_SERVICE_SID;
+
+// Helper function to normalize phone numbers
 const normalizePhoneNumber = (value: string) => {
-  // Remove all non-numeric characters
   return value.replace(/\D/g, '');
+};
+
+// Function to ensure phone number is in E.164 format
+const formatPhoneForStorage = (phoneNumber: string): string => {
+  const normalized = normalizePhoneNumber(phoneNumber);
+  // If not already in proper format, add +1 (US) prefix
+  return normalized.startsWith('+') ? normalized : 
+         normalized.startsWith('1') ? `+${normalized}` : `+1${normalized}`;
 };
 
 export async function POST(request: Request) {
@@ -14,80 +28,91 @@ export async function POST(request: Request) {
 
     if (!identifier) {
       return NextResponse.json(
-        { error: "Identifier (email or phone) is required" },
+        { error: "Email or phone number is required" },
         { status: 400 }
       );
     }
 
-    if (!method || (method !== "email" && method !== "phone")) {
-      return NextResponse.json(
-        { error: "Valid method (email or phone) is required" },
-        { status: 400 }
-      );
-    }
+    // Determine if identifier is email or phone
+    const isEmail = identifier.includes('@');
+    
+    // For phone numbers, ensure proper formatting
+    const normalizedIdentifier = isEmail 
+      ? identifier 
+      : formatPhoneForStorage(identifier);
 
-    // Validate identifier format based on method
-    if (method === "email" && !identifier.includes("@")) {
-      return NextResponse.json(
-        { error: "Invalid email format" },
-        { status: 400 }
-      );
-    }
+    console.log(`Looking for user with ${isEmail ? 'email' : 'phone'}: ${normalizedIdentifier}`);
 
-    if (method === "phone" && !/^[\d\s()+\-]+$/.test(identifier)) {
-      return NextResponse.json(
-        { error: "Invalid phone number format" },
-        { status: 400 }
-      );
-    }
-
-    // Normalize phone number if method is phone
-    const normalizedIdentifier = method === "phone" 
-      ? normalizePhoneNumber(identifier)
-      : identifier;
-
-    // Find the user by email or phone number
-    const user = await prisma.user.findFirst({
-      where: method === "email" 
-        ? { email: normalizedIdentifier } 
-        : { phoneNumber: normalizedIdentifier }
+    // Find user by email or phone
+    let user = await prisma.user.findFirst({
+      where: isEmail
+        ? { email: normalizedIdentifier }
+        : { phoneNumber: normalizedIdentifier },
     });
 
+    // If not found and it's a phone number, try alternative formats
+    if (!user && !isEmail) {
+      const numericPhoneOnly = normalizePhoneNumber(identifier);
+      console.log("Trying alternative phone lookup:", numericPhoneOnly);
+      
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phoneNumber: `+${numericPhoneOnly}` },
+            { phoneNumber: `+1${numericPhoneOnly}` },
+            { phoneNumber: numericPhoneOnly }
+          ]
+        }
+      });
+    }
+
     if (!user) {
+      console.log(`User not found for ${isEmail ? 'email' : 'phone'}: ${normalizedIdentifier}`);
       return NextResponse.json(
-        { error: "User not found" },
+        { error: "No account found with this information" },
         { status: 404 }
       );
     }
 
-    // Generate and store OTP
-    const otp = await setOTPForUser(user.id);
-    
-    // Send OTP via the preferred method
-    let otpSent = false;
-    
-    if (method === "email") {
-      otpSent = await sendEmailOTP(normalizedIdentifier, otp);
-    } else if (method === "phone") {
-      otpSent = await sendSMSOTP(normalizedIdentifier, otp);
-    }
+    console.log(`User found: ${user.id}, sending verification code via ${method}`);
 
-    // Update the user's preferred MFA method
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { preferredMfa: method }
-    });
+    try {
+      // Send verification via Twilio
+      const verification = await client.verify.v2
+        .services(VERIFY_SERVICE_SID!)
+        .verifications.create({
+          to: method === "email" ? user.email! : user.phoneNumber!,
+          channel: method === "email" ? "email" : "sms",
+        });
 
-    if (!otpSent) {
+      console.log(`Verification status: ${verification.status}`);
+
+      // Set OTP expiry (15 minutes)
+      const otpExpiry = new Date();
+      otpExpiry.setMinutes(otpExpiry.getMinutes() + 15);
+
+      // Update user with new OTP expiry
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { otpExpiry },
+      });
+
+      // Return success response
+      return NextResponse.json({
+        success: true,
+        message: `Verification code sent to your ${method}`,
+        method,
+        identifier: method === "email" ? user.email : user.phoneNumber,
+      });
+    } catch (twilioError: any) {
+      console.error("Twilio error:", twilioError);
       return NextResponse.json(
-        { error: "Failed to send verification code" },
+        { error: `Failed to send verification code: ${twilioError.message}` },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("OTP request error:", error);
+    console.error("Error in send-otp:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }

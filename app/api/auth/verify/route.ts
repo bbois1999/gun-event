@@ -11,6 +11,19 @@ const client = twilio(
 
 const VERIFY_SERVICE_SID = process.env.TWILIO_VERIFY_SERVICE_SID;
 
+// Helper function to normalize phone numbers
+const normalizePhoneNumber = (value: string) => {
+  return value.replace(/\D/g, '');
+};
+
+// Function to ensure phone number is in E.164 format
+const formatPhoneForStorage = (phoneNumber: string): string => {
+  const normalized = normalizePhoneNumber(phoneNumber);
+  // If not already in proper format, add +1 (US) prefix
+  return normalized.startsWith('+') ? normalized : 
+         normalized.startsWith('1') ? `+${normalized}` : `+1${normalized}`;
+};
+
 export async function POST(request: Request) {
   try {
     const { identifier, code } = await request.json();
@@ -21,19 +34,46 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    
+    // Determine if identifier is email or phone
+    const isEmail = identifier.includes('@');
+    
+    // Format the identifier appropriately
+    const formattedIdentifier = isEmail ? identifier : formatPhoneForStorage(identifier);
+    
+    console.log(`Processing verification for ${isEmail ? 'email' : 'phone'}: ${formattedIdentifier}`);
 
     // Find the pending user
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: identifier },
-          { phoneNumber: identifier }
+          { email: formattedIdentifier },
+          { phoneNumber: formattedIdentifier }
         ],
         otpExpiry: {
           gt: new Date()
         }
       }
     });
+    
+    // If not found and it's a phone number, try alternative formats
+    if (!user && !isEmail) {
+      const numericPhone = normalizePhoneNumber(identifier);
+      console.log("Trying alternative phone formats for verification:", numericPhone);
+      
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phoneNumber: `+${numericPhone}` },
+            { phoneNumber: `+1${numericPhone}` },
+            { phoneNumber: numericPhone }
+          ],
+          otpExpiry: {
+            gt: new Date()
+          }
+        }
+      });
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -42,12 +82,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // Use the actual stored identifier for verification
+    const verificationIdentifier = isEmail ? user.email : user.phoneNumber;
+    console.log(`Using stored identifier for verification: ${verificationIdentifier}`);
+
     try {
       // Verify the code with Twilio
       const verificationCheck = await client.verify.v2
         .services(VERIFY_SERVICE_SID!)
         .verificationChecks.create({
-          to: identifier,
+          to: verificationIdentifier!,
           code
         });
 
@@ -58,8 +102,8 @@ export async function POST(request: Request) {
         const updatedUser = await prisma.user.update({
           where: { id: user.id },
           data: {
-            verifiedEmail: identifier === user.email ? true : undefined,
-            verifiedPhone: identifier === user.phoneNumber ? true : undefined,
+            verifiedEmail: isEmail ? true : undefined,
+            verifiedPhone: !isEmail ? true : undefined,
             otpExpiry: new Date() // Expire the OTP immediately after successful verification
           },
           select: {

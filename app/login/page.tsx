@@ -61,11 +61,21 @@ export default function LoginPage() {
       const method = identifier.includes('@') ? "email" : "phone"
       setVerificationMethod(method)
       
+      // Prepare identifier
+      let formattedIdentifier = identifier
+      if (method === "phone") {
+        // Strip formatting and ensure E.164 format for phone numbers
+        const normalized = normalizePhoneNumber(identifier)
+        formattedIdentifier = normalized.startsWith('+') ? normalized : `+1${normalized}`
+      }
+      
+      console.log("Sending OTP to:", formattedIdentifier, "via", method)
+      
       const response = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          identifier, 
+          identifier: formattedIdentifier, 
           method 
         }),
       })
@@ -78,7 +88,6 @@ export default function LoginPage() {
       }
       
       setIsOtpSent(true)
-      alert(data.message || "Verification code sent successfully!")
       
     } catch (error) {
       console.error("OTP request error:", error)
@@ -100,10 +109,20 @@ export default function LoginPage() {
     try {
       setLoading(true)
       
-      console.log("Attempting sign in with:", { identifier, otp: otpCode })
+      // Determine if identifier is email or phone and format accordingly
+      const isEmail = identifier.includes('@')
+      let formattedIdentifier = identifier
+      
+      if (!isEmail) {
+        // Format phone number consistently for verification
+        const normalized = normalizePhoneNumber(identifier)
+        formattedIdentifier = normalized.startsWith('+') ? normalized : `+1${normalized}`
+      }
+      
+      console.log("Attempting sign in with:", { identifier: formattedIdentifier, otp: otpCode })
       
       const result = await signIn("otp", {
-        identifier,
+        identifier: formattedIdentifier,
         otp: otpCode,
         redirect: false,
         callbackUrl: "/"
@@ -205,9 +224,17 @@ export default function LoginPage() {
     
     // If it looks like a phone number, format it
     if (!value.includes('@')) {
-      setIdentifier(formatPhoneNumber(value))
+      const formattedNumber = formatPhoneNumber(value)
+      setIdentifier(formattedNumber)
+      
+      // Always set phone method when entering a phone number
+      if (formattedNumber && !formattedNumber.includes('@')) {
+        setVerificationMethod("phone")
+      }
     } else {
       setIdentifier(value)
+      // Set email method when entering an email
+      setVerificationMethod("email")
     }
   }
 
@@ -240,62 +267,80 @@ export default function LoginPage() {
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
-                <div className="space-y-2">
-                  <Label htmlFor="login-method">Login Method</Label>
-                  <div className="flex space-x-4 mb-4">
-                    <Label className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="loginMethod"
-                        checked={verificationMethod === "email"}
-                        onChange={() => {
-                          setVerificationMethod("email")
-                          if (!isOtpSent) setIdentifier("")
-                        }}
-                      />
-                      <span>Email</span>
-                    </Label>
-                    <Label className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="loginMethod"
-                        checked={verificationMethod === "phone"}
-                        onChange={() => {
-                          setVerificationMethod("phone")
-                          if (!isOtpSent) setIdentifier("")
-                        }}
-                      />
-                      <span>Phone</span>
-                    </Label>
-                  </div>
-                  
-                  <Label htmlFor="identifier">
-                    {verificationMethod === "email" ? "Email" : "Phone Number"}
-                  </Label>
-                  <Input 
-                    id="identifier" 
-                    type={verificationMethod === "email" ? "email" : "tel"}
-                    placeholder={verificationMethod === "email" ? "email@example.com" : "+1234567890"}
-                    value={identifier}
-                    onChange={handleIdentifierChange}
-                    disabled={isOtpSent}
-                    required
-                  />
-                </div>
                 
-                {isOtpSent && (
-                  <div className="space-y-2">
-                    <Label htmlFor="otp-code">Verification Code</Label>
-                    <Input 
-                      id="otp-code" 
-                      type="text" 
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      required
-                    />
-                  </div>
+                {!isOtpSent ? (
+                  // Initial login screen - enter identifier
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-method">Login Method</Label>
+                      <div className="flex space-x-4 mb-4">
+                        <Label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="loginMethod"
+                            checked={verificationMethod === "email"}
+                            onChange={() => {
+                              setVerificationMethod("email")
+                              setIdentifier("")
+                            }}
+                          />
+                          <span>Email</span>
+                        </Label>
+                        <Label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="loginMethod"
+                            checked={verificationMethod === "phone"}
+                            onChange={() => {
+                              setVerificationMethod("phone")
+                              setIdentifier("")
+                            }}
+                          />
+                          <span>Phone</span>
+                        </Label>
+                      </div>
+                      
+                      <Label htmlFor="identifier">
+                        {verificationMethod === "email" ? "Email" : "Phone Number"}
+                      </Label>
+                      <Input 
+                        id="identifier" 
+                        type={verificationMethod === "email" ? "email" : "tel"}
+                        placeholder={verificationMethod === "email" ? "email@example.com" : "(123) 456-7890"}
+                        value={identifier}
+                        onChange={handleIdentifierChange}
+                        required
+                      />
+                    </div>
+                  </>
+                ) : (
+                  // Verification code screen
+                  <>
+                    <div className="text-center mb-4">
+                      <p className="text-sm text-muted-foreground">
+                        A verification code has been sent to your {verificationMethod === "email" ? "email" : "phone"}
+                      </p>
+                      <p className="font-medium mt-2">
+                        {verificationMethod === "email" ? identifier : identifier}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="otp-code">Enter Verification Code</Label>
+                      <Input 
+                        id="otp-code" 
+                        type="text" 
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="123456"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                  </>
                 )}
               </CardContent>
+              
               <CardFooter className="flex flex-col space-y-2">
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading 
