@@ -100,19 +100,32 @@ export default function LoginPage() {
     try {
       setLoading(true)
       
+      console.log("Attempting sign in with:", { identifier, otp: otpCode })
+      
       const result = await signIn("otp", {
         identifier,
         otp: otpCode,
         redirect: false,
+        callbackUrl: "/"
       })
       
+      console.log("Sign in result:", result)
+      
       if (result?.error) {
-        setError("Invalid verification code")
+        console.error("Sign in error:", result.error)
+        setError("Invalid verification code or verification failed")
         return
       }
       
-      // Success - redirect to events page
-      router.push("/events")
+      if (result?.url) {
+        // Success - redirect to the returned URL
+        router.push(result.url)
+      } else {
+        // Fallback to home page
+        router.push("/")
+      }
+      
+      // Force a page refresh to update auth state
       router.refresh()
     } catch (error) {
       console.error("OTP login error:", error)
@@ -124,53 +137,58 @@ export default function LoginPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
-    
-    // Validate inputs
-    if (!email || !username || !phoneNumber) {
-      setError("Email, username, and phone number are required")
-      return
-    }
+    setError("")
+    setLoading(true)
     
     try {
-      setLoading(true)
+      if (!email || !username || !phoneNumber) {
+        setError("All fields are required")
+        setLoading(false)
+        return
+      }
       
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email, 
-          username, 
-          phoneNumber,
-          verificationMethod 
+      // Normalize phone number before sending to the server
+      const normalizedPhone = normalizePhoneNumber(phoneNumber)
+      
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          username,
+          phoneNumber: normalizedPhone,
+          verificationMethod,
         }),
       })
       
       const data = await response.json()
       
       if (!response.ok) {
-        setError(data.error || "Failed to create account")
+        // Handle specific errors
+        if (response.status === 409) {
+          setError(data.error || "An account with this information already exists")
+        } else if (response.status === 500 && data.error?.includes("verification code")) {
+          setError("Registration failed: " + data.error + ". Please try again or contact support.")
+        } else {
+          setError(data.error || "Registration failed. Please try again.")
+        }
+        setLoading(false)
         return
       }
-
-      // Show success message and switch to login
-      alert(data.message || "Account created successfully! Please verify with the code sent to you.")
       
-      // Set identifier for OTP login based on chosen verification method
-      if (verificationMethod === "email") {
-        setIdentifier(email)
-      } else {
-        setIdentifier(phoneNumber)
-      }
-      
-      // Switch to login mode and show OTP input
-      setMode("login")
-      setIsOtpSent(true)
-      
+      // Account created and verification code sent successfully
+      const params = new URLSearchParams({
+        email: data.email,
+        phone: data.phoneNumber,
+        method: data.method,
+        identifier: data.identifier
+      });
+      router.push(`/verify?${params.toString()}`);
     } catch (error) {
       console.error("Signup error:", error)
-      setError("An unexpected error occurred")
-    } finally {
+      setError("An unexpected error occurred. Please try again.")
       setLoading(false)
     }
   }

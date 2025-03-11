@@ -31,6 +31,8 @@ model User {
   likes             Like[]
   notifications     Notification[] @relation("userNotifications")
   notificationsSent Notification[] @relation("notificationSender")
+  accounts          Account[]
+  sessions          Session[]
 }
 
 /// Like model for post likes
@@ -120,4 +122,32 @@ model Event {
   authorId    String
   posts       Post[]
   imagePosts  ImagePost[]
+}
+
+/// NextAuth Session model
+model Session {
+  id           String   @id() @default(cuid())
+  sessionToken String   @unique()
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// NextAuth Account model for database session support
+model Account {
+  id                String  @id() @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
 }

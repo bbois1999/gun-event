@@ -1,7 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { verifyOTP } from "@/lib/auth/otp";
 
@@ -26,10 +25,11 @@ declare module "next-auth" {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  // A secret is still required even without encryption
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
+      id: "otp",
       name: "OTP",
       credentials: {
         identifier: { label: "Email or Phone", type: "text", placeholder: "email@example.com or (123) 456-7890" },
@@ -37,6 +37,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.identifier || !credentials?.otp) {
+          console.log("Missing credentials", credentials);
           return null;
         }
 
@@ -47,6 +48,8 @@ export const authOptions: NextAuthOptions = {
           const normalizedIdentifier = isEmail 
             ? credentials.identifier 
             : normalizePhoneNumber(credentials.identifier);
+          
+          console.log("Looking for user with identifier:", normalizedIdentifier);
           
           // Find user based on identifier type
           const user = await prisma.user.findFirst({
@@ -68,6 +71,8 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          console.log("Found user:", user.id, "Verifying OTP:", credentials.otp);
+          
           // Verify OTP
           const isValidOTP = await verifyOTP(user.id, credentials.otp);
           
@@ -76,6 +81,9 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          console.log("OTP verified successfully for user:", user.id);
+          
+          // Return user data
           return {
             id: user.id,
             email: user.email,
@@ -91,30 +99,53 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
-  pages: {
-    signIn: "/login",
+  jwt: {
+    // Just use simple JSON handling to be compatible with our direct login
+    encode: async ({ token }) => {
+      if (!token) return "";
+      return JSON.stringify(token);
+    },
+    decode: async ({ token }) => {
+      if (!token) return {};
+      
+      try {
+        // Try to parse the token
+        return JSON.parse(token as string);
+      } catch (error) {
+        console.error("Failed to parse JWT token", error);
+        // Return a minimal valid token object if parsing fails
+        return { 
+          sub: String(token) 
+        };
+      }
+    }
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.username = user.username;
-        token.phoneNumber = user.phoneNumber;
+        token.username = (user as any).username;
+        token.phoneNumber = (user as any).phoneNumber;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
         session.user.phoneNumber = token.phoneNumber as string;
       }
       return session;
     }
-  }
+  },
+  pages: {
+    signIn: "/login",
+    error: '/login'
+  },
+  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST }; 
+export { handler as GET, handler as POST };

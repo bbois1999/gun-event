@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { sendSMS } from '@/lib/twilio';
 
 /**
  * Generates a random OTP code
@@ -89,16 +90,21 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
 }
 
 /**
- * Sends an OTP to a user via SMS
- * This is a placeholder function - implement your SMS sending logic here
+ * Sends an OTP to a user via SMS using Twilio
  * @param phoneNumber The phone number to send the OTP to
  * @param otp The OTP to send
  * @returns Whether the SMS was sent successfully
  */
 export async function sendSMSOTP(phoneNumber: string, otp: string): Promise<boolean> {
-  // This is where you would integrate with your SMS service (Twilio, Vonage, etc.)
-  console.log(`SEND SMS: OTP ${otp} sent to ${phoneNumber}`);
-  
-  // For now, just return true to simulate successful sending
-  return true;
+  try {
+    const message = `Your GunEvent verification code is: ${otp}. Valid for 10 minutes.`;
+    
+    // Use the Twilio service to send the SMS
+    const success = await sendSMS(phoneNumber, message);
+    
+    return success;
+  } catch (error) {
+    console.error('Error in sendSMSOTP:', error);
+    return false;
+  }
 } 
