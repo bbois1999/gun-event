@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { sendSMS } from '@/lib/twilio';
+import { sendVerificationEmail } from '@/lib/resend';
 import twilio from "twilio";
 
 const client = twilio(
@@ -135,17 +136,28 @@ export async function verifyOTP(userId: string, otp: string): Promise<boolean> {
 
 /**
  * Sends an OTP to a user via email
- * This is a placeholder function - implement your email sending logic here
  * @param email The email to send the OTP to
  * @param otp The OTP to send
  * @returns Whether the email was sent successfully
  */
 export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
-  // This is where you would integrate with your email service (SendGrid, Mailgun, etc.)
-  console.log(`SEND EMAIL: OTP ${otp} sent to ${email}`);
-  
-  // For now, just return true to simulate successful sending
-  return true;
+  try {
+    console.log(`Sending OTP ${otp} via email to ${email}`);
+    
+    // Use the Resend service to send the email
+    const success = await sendVerificationEmail(email, otp);
+    
+    if (success) {
+      console.log(`Successfully sent OTP email to ${email}`);
+    } else {
+      console.error(`Failed to send OTP email to ${email}`);
+    }
+    
+    return success;
+  } catch (error) {
+    console.error('Error in sendEmailOTP:', error);
+    return false;
+  }
 }
 
 /**

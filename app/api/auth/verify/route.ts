@@ -87,15 +87,26 @@ export async function POST(request: Request) {
     console.log(`Using stored identifier for verification: ${verificationIdentifier}`);
 
     try {
-      // Verify the code with Twilio
-      const verificationCheck = await client.verify.v2
-        .services(VERIFY_SERVICE_SID!)
-        .verificationChecks.create({
-          to: verificationIdentifier!,
-          code
-        });
+      let isVerificationValid = false;
+      
+      if (isEmail) {
+        // For email, check against stored OTP in database
+        isVerificationValid = user.otpSecret === code;
+        console.log(`Email OTP verification result: ${isVerificationValid}`);
+      } else {
+        // For SMS, use Twilio Verify API
+        const verificationCheck = await client.verify.v2
+          .services(VERIFY_SERVICE_SID!)
+          .verificationChecks.create({
+            to: verificationIdentifier!,
+            code
+          });
 
-      if (verificationCheck.status === 'approved') {
+        isVerificationValid = verificationCheck.status === 'approved';
+        console.log(`SMS verification result: ${verificationCheck.status}`);
+      }
+
+      if (isVerificationValid) {
         console.log("OTP verified successfully!");
         
         // Update user verification status
@@ -104,6 +115,7 @@ export async function POST(request: Request) {
           data: {
             verifiedEmail: isEmail ? true : undefined,
             verifiedPhone: !isEmail ? true : undefined,
+            otpSecret: null, // Clear the OTP
             otpExpiry: new Date() // Expire the OTP immediately after successful verification
           },
           select: {
@@ -165,7 +177,7 @@ export async function POST(request: Request) {
         );
       }
     } catch (error: any) {
-      console.error('Twilio verification check error:', error);
+      console.error('Verification check error:', error);
       return NextResponse.json(
         { error: `Verification failed: ${error.message}` },
         { status: 400 }

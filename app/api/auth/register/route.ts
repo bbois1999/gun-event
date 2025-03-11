@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import twilio from "twilio";
+import { generateOTP } from "@/lib/auth/otp";
+import { sendVerificationEmail } from "@/lib/resend";
 
 // Initialize Twilio client
+console.log("Initialized Twilio client");
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
@@ -95,16 +98,48 @@ export async function POST(request: Request) {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes expiry
     });
 
-    // Send verification code using Twilio Verify
-    try {
-      const verification = await client.verify.v2
-        .services(VERIFY_SERVICE_SID!)
-        .verifications.create({
-          to: verificationMethod === 'phone' ? normalizedPhoneNumber : email,
-          channel: verificationMethod === 'phone' ? 'sms' : 'email'
-        });
+    // Set OTP expiry (10 minutes)
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
 
-      console.log('Verification status:', verification.status);
+    try {
+      let verificationSent = false;
+      let otpSecret = null;
+      
+      // Handle verification based on the chosen method
+      if (verificationMethod === 'email') {
+        // For email, use Resend
+        console.log("Using Resend for email verification");
+        const otp = generateOTP();
+        otpSecret = otp;
+        verificationSent = await sendVerificationEmail(email, otp);
+        
+        if (!verificationSent) {
+          return NextResponse.json(
+            { error: "Failed to send verification email" },
+            { status: 500 }
+          );
+        }
+      } else {
+        // For SMS, use Twilio Verify
+        console.log("Using Twilio for SMS verification");
+        const verification = await client.verify.v2
+          .services(VERIFY_SERVICE_SID!)
+          .verifications.create({
+            to: normalizedPhoneNumber,
+            channel: 'sms'
+          });
+
+        console.log('Verification status:', verification.status);
+        verificationSent = verification.status === 'pending';
+        
+        if (!verificationSent) {
+          return NextResponse.json(
+            { error: "Failed to send SMS verification" },
+            { status: 500 }
+          );
+        }
+      }
 
       // Create temporary user record with verification pending status
       const user = await prisma.user.create({
@@ -115,7 +150,8 @@ export async function POST(request: Request) {
           verifiedEmail: false,
           verifiedPhone: false,
           preferredMfa: verificationMethod,
-          otpExpiry: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes expiry
+          otpSecret, // Store OTP for email verification
+          otpExpiry,
         },
       });
 
@@ -128,7 +164,7 @@ export async function POST(request: Request) {
         method: verificationMethod
       });
     } catch (error: any) {
-      console.error('Twilio verification error:', error);
+      console.error('Verification error:', error);
       return NextResponse.json(
         { error: `Failed to send verification code: ${error.message}` },
         { status: 500 }

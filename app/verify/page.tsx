@@ -149,16 +149,14 @@ export default function VerifyPage() {
     setResendLoading(true)
     
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: searchParams.get("email"),
-          username: searchParams.get("username"),
-          phoneNumber: searchParams.get("phone"),
-          verificationMethod: method
+          identifier,
+          method
         }),
       })
       

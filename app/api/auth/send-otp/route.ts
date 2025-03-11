@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import twilio from "twilio";
+import { sendEmailOTP } from "@/lib/auth/otp";
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -21,6 +22,11 @@ const formatPhoneForStorage = (phoneNumber: string): string => {
   return normalized.startsWith('+') ? normalized : 
          normalized.startsWith('1') ? `+${normalized}` : `+1${normalized}`;
 };
+
+// Function to generate a random OTP code
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export async function POST(request: Request) {
   try {
@@ -77,25 +83,52 @@ export async function POST(request: Request) {
     console.log(`User found: ${user.id}, sending verification code via ${method}`);
 
     try {
-      // Send verification via Twilio
-      const verification = await client.verify.v2
-        .services(VERIFY_SERVICE_SID!)
-        .verifications.create({
-          to: method === "email" ? user.email! : user.phoneNumber!,
-          channel: method === "email" ? "email" : "sms",
-        });
-
-      console.log(`Verification status: ${verification.status}`);
-
+      let verificationSuccess = false;
+      
       // Set OTP expiry (15 minutes)
       const otpExpiry = new Date();
       otpExpiry.setMinutes(otpExpiry.getMinutes() + 15);
+      
+      if (method === "email") {
+        // For email, generate our own OTP and send via Resend
+        const otp = generateOTP();
+        
+        // Store the OTP in the database
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { 
+            otpSecret: otp,
+            otpExpiry
+          },
+        });
+        
+        // Send email with the OTP
+        verificationSuccess = await sendEmailOTP(user.email!, otp);
+      } else {
+        // For SMS, use Twilio Verify
+        const verification = await client.verify.v2
+          .services(VERIFY_SERVICE_SID!)
+          .verifications.create({
+            to: user.phoneNumber!,
+            channel: "sms",
+          });
 
-      // Update user with new OTP expiry
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { otpExpiry },
-      });
+        console.log(`Twilio verification status: ${verification.status}`);
+        verificationSuccess = verification.status === "pending";
+        
+        // Update user with OTP expiry
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { otpExpiry },
+        });
+      }
+      
+      if (!verificationSuccess) {
+        return NextResponse.json(
+          { error: `Failed to send verification code via ${method}` },
+          { status: 500 }
+        );
+      }
 
       // Return success response
       return NextResponse.json({
@@ -104,10 +137,10 @@ export async function POST(request: Request) {
         method,
         identifier: method === "email" ? user.email : user.phoneNumber,
       });
-    } catch (twilioError: any) {
-      console.error("Twilio error:", twilioError);
+    } catch (error: any) {
+      console.error("Verification send error:", error);
       return NextResponse.json(
-        { error: `Failed to send verification code: ${twilioError.message}` },
+        { error: `Failed to send verification code: ${error.message}` },
         { status: 500 }
       );
     }
