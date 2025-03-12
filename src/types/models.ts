@@ -21,6 +21,8 @@ export interface Post {
   published: boolean
   authorId: string
   eventId?: string
+  imageUrl?: string
+  imageKey?: string
 }
 
 export interface ImagePost {

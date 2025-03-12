@@ -1,0 +1,15 @@
+---
+description: Never edit my .env or .env.* files directly. Never run commands for me. Always tell me what commands to run instead of running them. Always provide instructions for environment changes rather than making them directly.
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+Never edit my .env or .env.* files directly.
+Never run commands for me.
+Always tell me what commands to run instead of running them.
+Always provide instructions for environment changes rather than making them directly.
+
+- You can @ files here
+- You can use markdown but dont have to

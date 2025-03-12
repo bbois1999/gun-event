@@ -20,21 +20,12 @@ import { useCreatePost } from '@/lib/hooks/custom/use-create-post'
 import { Loader2, Image as ImageIcon } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { EventSelector } from './EventSelector'
+import { useUploadThing } from '@/lib/uploadthing-react'
 
 interface PostCreationDialogProps {
   triggerButton?: React.ReactNode
   preselectedEvent?: Event
   onSuccess?: () => void
-}
-
-// Function to convert a file to a base64 string
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = error => reject(error)
-  })
 }
 
 export function PostCreationDialog({ 
@@ -53,6 +44,7 @@ export function PostCreationDialog({
   const { toast } = useToast()
 
   const createPost = useCreatePost()
+  const { startUpload, isUploading } = useUploadThing("postImage")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,20 +52,31 @@ export function PostCreationDialog({
 
     setIsSubmitting(true)
     try {
-      // Convert image to base64 if present
-      let base64Image = null
+      let imageUrl = null;
+      let imageKey = null;
+      
+      // Upload image to UploadThing if selected
       if (image) {
-        base64Image = await fileToBase64(image)
+        console.log("Uploading image to UploadThing:", image.name);
+        const uploadResult = await startUpload([image]);
+        
+        if (uploadResult && uploadResult[0]) {
+          imageUrl = uploadResult[0].url;
+          imageKey = uploadResult[0].key;
+          console.log("Image uploaded successfully:", imageUrl);
+        } else {
+          throw new Error("Failed to upload image");
+        }
       }
 
-      // Create the post with image included
+      // Create the post with image details if available
       await createPost.mutateAsync({
         data: {
           title,
           content,
           published: true,
-          // Include the image in the content if present
-          ...(base64Image && { image: base64Image }),
+          ...(imageUrl && { imageUrl }),
+          ...(imageKey && { imageKey }),
           author: { connect: { id: session.user.id } },
           ...(selectedEvent && {
             event: { connect: { id: selectedEvent.id } }
@@ -189,11 +192,11 @@ export function PostCreationDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
+            <Button type="submit" disabled={isSubmitting || isUploading}>
+              {isSubmitting || isUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {isUploading ? 'Uploading...' : 'Creating...'}
                 </>
               ) : (
                 'Create Post'

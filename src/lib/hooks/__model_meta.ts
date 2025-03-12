@@ -49,12 +49,6 @@ const metadata = {
                     isDataModel: true,
                     isArray: true,
                     backLink: 'author',
-                }, imagePosts: {
-                    name: "imagePosts",
-                    type: "ImagePost",
-                    isDataModel: true,
-                    isArray: true,
-                    backLink: 'author',
                 }, events: {
                     name: "events",
                     type: "Event",
@@ -150,30 +144,14 @@ const metadata = {
                     name: "post",
                     type: "Post",
                     isDataModel: true,
-                    isOptional: true,
                     backLink: 'likes',
                     isRelationOwner: true,
                     foreignKeyMapping: { "id": "postId" },
                 }, postId: {
                     name: "postId",
                     type: "String",
-                    isOptional: true,
                     isForeignKey: true,
                     relationField: 'post',
-                }, imagePost: {
-                    name: "imagePost",
-                    type: "ImagePost",
-                    isDataModel: true,
-                    isOptional: true,
-                    backLink: 'likes',
-                    isRelationOwner: true,
-                    foreignKeyMapping: { "id": "imagePostId" },
-                }, imagePostId: {
-                    name: "imagePostId",
-                    type: "String",
-                    isOptional: true,
-                    isForeignKey: true,
-                    relationField: 'imagePost',
                 },
             }
             , uniqueConstraints: {
@@ -183,9 +161,6 @@ const metadata = {
                 }, userId_postId: {
                     name: "userId_postId",
                     fields: ["userId", "postId"]
-                }, userId_imagePostId: {
-                    name: "userId_imagePostId",
-                    fields: ["userId", "imagePostId"]
                 },
             }
             ,
@@ -214,10 +189,6 @@ const metadata = {
                     type: "String",
                 }, postId: {
                     name: "postId",
-                    type: "String",
-                    isOptional: true,
-                }, imagePostId: {
-                    name: "imagePostId",
                     type: "String",
                     isOptional: true,
                 }, user: {
@@ -331,8 +302,12 @@ const metadata = {
                     name: "published",
                     type: "Boolean",
                     attributes: [{ "name": "@default", "args": [{ "value": false }] }],
-                }, image: {
-                    name: "image",
+                }, imageUrl: {
+                    name: "imageUrl",
+                    type: "String",
+                    isOptional: true,
+                }, imageKey: {
+                    name: "imageKey",
                     type: "String",
                     isOptional: true,
                 }, author: {
@@ -367,77 +342,6 @@ const metadata = {
                     isDataModel: true,
                     isArray: true,
                     backLink: 'post',
-                },
-            }
-            , uniqueConstraints: {
-                id: {
-                    name: "id",
-                    fields: ["id"]
-                },
-            }
-            ,
-        }
-        ,
-        imagePost: {
-            name: 'ImagePost', fields: {
-                id: {
-                    name: "id",
-                    type: "String",
-                    isId: true,
-                    attributes: [{ "name": "@default", "args": [] }],
-                }, createdAt: {
-                    name: "createdAt",
-                    type: "DateTime",
-                    attributes: [{ "name": "@default", "args": [] }],
-                }, updatedAt: {
-                    name: "updatedAt",
-                    type: "DateTime",
-                    attributes: [{ "name": "@updatedAt", "args": [] }],
-                }, title: {
-                    name: "title",
-                    type: "String",
-                }, content: {
-                    name: "content",
-                    type: "String",
-                }, published: {
-                    name: "published",
-                    type: "Boolean",
-                    attributes: [{ "name": "@default", "args": [{ "value": false }] }],
-                }, author: {
-                    name: "author",
-                    type: "User",
-                    isDataModel: true,
-                    backLink: 'imagePosts',
-                    isRelationOwner: true,
-                    foreignKeyMapping: { "id": "authorId" },
-                }, authorId: {
-                    name: "authorId",
-                    type: "String",
-                    isForeignKey: true,
-                    relationField: 'author',
-                }, image: {
-                    name: "image",
-                    type: "String",
-                }, event: {
-                    name: "event",
-                    type: "Event",
-                    isDataModel: true,
-                    isOptional: true,
-                    backLink: 'imagePosts',
-                    isRelationOwner: true,
-                    foreignKeyMapping: { "id": "eventId" },
-                }, eventId: {
-                    name: "eventId",
-                    type: "String",
-                    isOptional: true,
-                    isForeignKey: true,
-                    relationField: 'event',
-                }, likes: {
-                    name: "likes",
-                    type: "Like",
-                    isDataModel: true,
-                    isArray: true,
-                    backLink: 'imagePost',
                 },
             }
             , uniqueConstraints: {
@@ -494,12 +398,6 @@ const metadata = {
                 }, posts: {
                     name: "posts",
                     type: "Post",
-                    isDataModel: true,
-                    isArray: true,
-                    backLink: 'event',
-                }, imagePosts: {
-                    name: "imagePosts",
-                    type: "ImagePost",
                     isDataModel: true,
                     isArray: true,
                     backLink: 'event',

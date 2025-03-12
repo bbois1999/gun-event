@@ -328,7 +328,7 @@ export function useSuspenseCountLike<TArgs extends Prisma.LikeCountArgs, TQueryF
     return useSuspenseModelQuery<TQueryFnData, TData, TError>('Like', `${endpoint}/like/count`, args, options, fetch);
 }
 
-export function useCheckLike<TError = DefaultError>(args: { operation: PolicyCrudKind; where?: { id?: string; userId?: string; postId?: string; imagePostId?: string }; }, options?: (Omit<UseQueryOptions<boolean, TError, boolean>, 'queryKey'> & ExtraQueryOptions)) {
+export function useCheckLike<TError = DefaultError>(args: { operation: PolicyCrudKind; where?: { id?: string; userId?: string; postId?: string }; }, options?: (Omit<UseQueryOptions<boolean, TError, boolean>, 'queryKey'> & ExtraQueryOptions)) {
     const { endpoint, fetch } = getHooksContext();
     return useModelQuery<boolean, boolean, TError>('Like', `${endpoint}/like/check`, args, options, fetch);
 }

@@ -23,19 +23,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
     
-    const { postId, postType } = body;
+    const { postId } = body;
     
     if (!postId) {
       console.log('Missing post ID in like request');
       return NextResponse.json({ error: 'Missing post ID' }, { status: 400 });
     }
     
-    // Default to 'post' if postType is missing or invalid
-    const validatedPostType = (postType === 'imagePost') ? 'imagePost' : 'post';
-    
     console.log('Attempting to like:', { 
       postId, 
-      postType: validatedPostType, 
       user: session.user.email,
       timestamp: new Date().toISOString()
     });
@@ -50,63 +46,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Try to find the post using the correct type
+    // Find the post
     let post = null;
-    let author = null;
-    let actualPostType = validatedPostType; // Track what type the post actually is
-    
     try {
-      if (validatedPostType === 'post') {
-        post = await prisma.post.findUnique({
-          where: { id: postId },
-          include: { author: true }
-        });
-      } else {
-        post = await prisma.imagePost.findUnique({
-          where: { id: postId },
-          include: { author: true }
-        });
-      }
-      
-      author = post?.author;
+      post = await prisma.post.findUnique({
+        where: { id: postId },
+        include: { author: true }
+      });
     } catch (error) {
-      console.error(`Error finding ${validatedPostType}:`, error);
-    }
-    
-    // If post not found with specified type, try the other type
-    if (!post) {
-      try {
-        if (validatedPostType === 'post') {
-          console.log(`Post not found as regular post, trying as imagePost: ${postId}`);
-          post = await prisma.imagePost.findUnique({
-            where: { id: postId },
-            include: { author: true }
-          });
-          if (post) actualPostType = 'imagePost'; // Update actual type if found
-        } else {
-          console.log(`Post not found as imagePost, trying as regular post: ${postId}`);
-          post = await prisma.post.findUnique({
-            where: { id: postId },
-            include: { author: true }
-          });
-          if (post) actualPostType = 'post'; // Update actual type if found
-        }
-        author = post?.author;
-      } catch (error) {
-        console.error('Error finding post with alternative type:', error);
-      }
+      console.error(`Error finding post:`, error);
+      return NextResponse.json({ error: 'Error finding post' }, { status: 500 });
     }
 
     if (!post) {
-      console.log(`Post not found with ID: ${postId} (tried both types)`);
+      console.log(`Post not found with ID: ${postId}`);
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    // Check if user already liked this post - use the ACTUAL post type found
+    // Check if user already liked this post
     let existingLike;
     const likeWhere = {
       userId: currentUser.id,
-      ...(actualPostType === 'post' ? { postId } : { imagePostId: postId }),
+      postId
     };
     
     console.log('Checking for existing like with:', likeWhere);
@@ -121,15 +82,15 @@ export async function POST(request: Request) {
     }
 
     if (existingLike) {
-      console.log(`User ${currentUser.email} already liked ${actualPostType} ${postId}`);
-      return NextResponse.json({ error: `Already liked this ${actualPostType}` }, { status: 400 });
+      console.log(`User ${currentUser.email} already liked post ${postId}`);
+      return NextResponse.json({ error: `Already liked this post` }, { status: 400 });
     }
 
-    // Create like with the ACTUAL post type that was found
+    // Create like
     try {
       const likeData = {
         userId: currentUser.id,
-        ...(actualPostType === 'post' ? { postId } : { imagePostId: postId }),
+        postId
       };
       
       console.log('Creating like with data:', likeData);
@@ -138,7 +99,7 @@ export async function POST(request: Request) {
         data: likeData,
       });
       
-      console.log(`Like created successfully: ${like.id} for ${actualPostType} ${postId}`);
+      console.log(`Like created successfully: ${like.id} for post ${postId}`);
     } catch (error) {
       console.error('Error creating like:', error);
       return NextResponse.json({ 
@@ -148,15 +109,15 @@ export async function POST(request: Request) {
     }
 
     // Create notification for post author (if not liking own post)
-    if (author && author.id !== currentUser.id) {
+    if (post.author && post.author.id !== currentUser.id) {
       try {
         const notification = await prisma.notification.create({
           data: {
             type: 'like',
-            message: `${currentUser.email} liked your ${actualPostType === 'post' ? 'post' : 'image post'} "${post.title}"`,
-            userId: author.id,
+            message: `${currentUser.email} liked your post "${post.title}"`,
+            userId: post.author.id,
             senderId: currentUser.id,
-            ...(actualPostType === 'post' ? { postId } : { imagePostId: postId }),
+            postId
           },
         });
         console.log(`Notification created: ${notification.id}`);
@@ -168,7 +129,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true,
-      message: `Successfully liked ${actualPostType} with ID ${postId}`
+      message: `Successfully liked post with ID ${postId}`
     });
   } catch (error) {
     console.error('Error in like post:', error);
@@ -199,19 +160,15 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
     
-    const { postId, postType } = body;
+    const { postId } = body;
     
     if (!postId) {
       console.log('Missing post ID in unlike request');
       return NextResponse.json({ error: 'Missing post ID' }, { status: 400 });
     }
     
-    // Default to 'post' if postType is missing or invalid
-    const validatedPostType = (postType === 'imagePost') ? 'imagePost' : 'post';
-    
     console.log('Attempting to unlike:', { 
       postId, 
-      postType: validatedPostType, 
       user: session.user.email,
       timestamp: new Date().toISOString()
     });
@@ -226,78 +183,39 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if the like exists - use detected post type from database
-    let existingLike;
-    let post = null;
-    let actualPostType = validatedPostType;
-    
-    // First check if the post exists and what type it actually is
-    try {
-      if (validatedPostType === 'post') {
-        post = await prisma.post.findUnique({ where: { id: postId } });
-      } else {
-        post = await prisma.imagePost.findUnique({ where: { id: postId } });
-      }
-    } catch (error) {
-      console.error(`Error finding ${validatedPostType} for unlike:`, error);
-    }
-    
-    // If not found with specified type, try other type
-    if (!post) {
-      try {
-        if (validatedPostType === 'post') {
-          console.log(`Post not found as regular post for unlike, trying imagePost: ${postId}`);
-          post = await prisma.imagePost.findUnique({ where: { id: postId } });
-          if (post) actualPostType = 'imagePost';
-        } else {
-          console.log(`Post not found as imagePost for unlike, trying regular post: ${postId}`);
-          post = await prisma.post.findUnique({ where: { id: postId } });
-          if (post) actualPostType = 'post';
-        }
-      } catch (error) {
-        console.error('Error finding post with alternative type for unlike:', error);
-      }
-    }
-    
-    // Check for existing like with correct post type
+    // Find the like
     const likeWhere = {
       userId: currentUser.id,
-      ...(actualPostType === 'post' ? { postId } : { imagePostId: postId }),
+      postId
     };
     
-    console.log('Checking for existing like to unlike with:', likeWhere);
+    console.log('Finding like to delete:', likeWhere);
     
+    // Delete the like if it exists
     try {
-      existingLike = await prisma.like.findFirst({
+      const result = await prisma.like.deleteMany({
         where: likeWhere,
       });
-    } catch (error) {
-      console.error('Error checking existing like for unlike:', error);
-      return NextResponse.json({ error: 'Error checking like status' }, { status: 500 });
-    }
-
-    if (!existingLike) {
-      console.log(`Like not found for ${actualPostType} ${postId} by user ${currentUser.email}`);
-      return NextResponse.json({ error: `Not liked this ${actualPostType}` }, { status: 400 });
-    }
-
-    // Delete like
-    try {
-      await prisma.like.delete({
-        where: {
-          id: existingLike.id,
-        },
-      });
       
-      console.log(`Like deleted successfully: ${existingLike.id} for ${actualPostType} ${postId}`);
+      if (result.count === 0) {
+        console.log(`No like found to delete for user ${currentUser.email} and post ${postId}`);
+        return NextResponse.json({ 
+          error: 'No like found for this post'
+        }, { status: 404 });
+      }
+      
+      console.log(`Deleted ${result.count} like(s) for user ${currentUser.email} and post ${postId}`);
     } catch (error) {
       console.error('Error deleting like:', error);
-      return NextResponse.json({ error: 'Failed to delete like' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Failed to unlike post',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
     }
 
     return NextResponse.json({ 
       success: true,
-      message: `Successfully unliked ${actualPostType} with ID ${postId}`
+      message: `Successfully unliked post with ID ${postId}`
     });
   } catch (error) {
     console.error('Error in unlike post:', error);

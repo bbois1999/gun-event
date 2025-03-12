@@ -1,8 +1,9 @@
+import { useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Share2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, ImageIcon } from "lucide-react";
 
 interface PostProps {
   username: string;
@@ -23,6 +24,9 @@ export function Post({
   likes,
   comments,
 }: PostProps) {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  
   return (
     <Card className="w-full max-w-2xl mb-4">
       <CardHeader className="flex flex-row items-center gap-4">
@@ -38,12 +42,34 @@ export function Post({
       <CardContent>
         <p className="mb-4">{content}</p>
         {imageUrl && (
-          <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+          <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
+            {imageLoading && !imageError && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-8 w-8 animate-pulse">
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </div>
+            )}
+            {imageError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Failed to load image</p>
+              </div>
+            )}
             <Image
               src={imageUrl}
               alt="Post image"
               fill
-              className="object-cover"
+              className={`object-cover transition-opacity duration-300 ${
+                imageLoading ? "opacity-0" : "opacity-100"
+              }`}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              priority
+              onLoad={() => setImageLoading(false)}
+              onError={() => {
+                setImageLoading(false);
+                setImageError(true);
+              }}
             />
           </div>
         )}

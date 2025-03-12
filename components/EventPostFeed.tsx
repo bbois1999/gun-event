@@ -12,13 +12,14 @@ import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
+import { ImageIcon } from 'lucide-react'
 
 type Like = {
   id: string
   userId: string
 }
 
-type CombinedPost = (Post | ImagePost) & {
+type CombinedPost = Post & {
   author: {
     id: string
     email: string
@@ -31,6 +32,7 @@ type CombinedPost = (Post | ImagePost) & {
   _count?: {
     likes: number
   }
+  imageUrl?: string
 }
 
 interface EventPostFeedProps {
@@ -43,6 +45,8 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({})
   const [likeCount, setLikeCount] = useState<Record<string, number>>({})
   const [isLiking, setIsLiking] = useState<Record<string, boolean>>({})
+  const [imageLoadingStates, setImageLoadingStates] = useState<Record<string, boolean>>({})
+  const [imageErrorStates, setImageErrorStates] = useState<Record<string, boolean>>({})
   
   // Initialize like states from posts data
   useEffect(() => {
@@ -65,6 +69,19 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
     setLikeCount(initialLikeCount)
   }, [posts, session])
 
+  // initialize image loading states at the beginning
+  useEffect(() => {
+    const initialImageLoadingStates: Record<string, boolean> = {};
+    
+    posts.forEach(post => {
+      if (post.imageUrl) {
+        initialImageLoadingStates[post.id] = true;
+      }
+    });
+    
+    setImageLoadingStates(initialImageLoadingStates);
+  }, [posts]);
+
   const handleLikeToggle = async (post: CombinedPost) => {
     if (!session?.user) {
       toast({
@@ -81,27 +98,13 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
     // Dump the post structure to console for debugging
     console.log('Post structure:', JSON.stringify(post, null, 2));
     
-    // Determine post type by looking for discriminating properties
-    let isImagePost = false;
-    let postType = 'post'; // default to regular post
-    
-    // ImagePost must have an image property that is a non-empty string
-    if ('image' in post && 
-        typeof (post as any).image === 'string' && 
-        (post as any).image.length > 0) {
-      isImagePost = true;
-      postType = 'imagePost';
-    }
-    
-    // Choose the appropriate endpoint based on post type
-    let endpoint = `/api/${isImagePost ? 'image-posts' : 'posts'}/${postId}/like`;
+    // All posts now use the unified model
+    let endpoint = `/api/posts/${postId}/like`;
     
     console.log('Like request:', { 
-      postId, 
-      postType,
+      postId,
       endpoint,
-      isImagePost,
-      image: isImagePost ? (post as any).image : 'N/A'
+      hasImage: !!post.imageUrl
     });
 
     // Optimistic update
@@ -123,89 +126,9 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
       })
 
       if (!response.ok) {
-        console.log(`Standard endpoint ${endpoint} failed with ${response.status}`);
+        console.log(`Like endpoint failed with ${response.status}`);
         
-        // Try to get error details
-        let errorMessage = 'Unknown error';
-        let errorData = {};
-        
-        try {
-          // Some responses might return empty bodies, handle that gracefully
-          const text = await response.text();
-          if (text && text.trim() !== '') {
-            errorData = JSON.parse(text);
-            console.log('Endpoint error details:', errorData);
-            errorMessage = errorData && typeof errorData === 'object' && 'error' in errorData 
-              ? String(errorData.error) 
-              : response.statusText;
-          } else {
-            console.log('Empty response body from endpoint');
-            // Use the status text as fallback error message
-            errorMessage = response.statusText || 'Unknown error';
-          }
-          
-          // If the error suggests trying the other endpoint type, try that first
-          if (errorMessage.includes('regular post') || errorMessage.includes('image post')) {
-            console.log('Trying alternative endpoint based on error message');
-            const alternativeType = isImagePost ? 'posts' : 'image-posts';
-            const alternativeEndpoint = `/api/${alternativeType}/${postId}/like`;
-            
-            console.log(`Attempting alternative endpoint: ${alternativeEndpoint}`);
-            const alternativeResponse = await fetch(alternativeEndpoint, {
-              method: isCurrentlyLiked ? 'DELETE' : 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (alternativeResponse.ok) {
-              console.log('Alternative endpoint succeeded');
-              return;
-            }
-          }
-        } catch (parseError) {
-          console.log('Could not parse error response:', parseError);
-          // Continue with the generic fallback
-        }
-        
-        // If specific endpoint failed, try the generic fallback
-        console.log('Trying generic fallback endpoint');
-        const fallbackResponse = await fetch('/api/like', {
-          method: isCurrentlyLiked ? 'DELETE' : 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            postId,
-            postType // Pass the detected type
-          })
-        });
-        
-        if (fallbackResponse.ok) {
-          console.log('Fallback to generic endpoint succeeded');
-          return;
-        }
-        
-        // If still failed, try with the opposite post type
-        const oppositeType = postType === 'post' ? 'imagePost' : 'post';
-        console.log(`Trying generic endpoint with opposite type: ${oppositeType}`);
-        const lastAttemptResponse = await fetch('/api/like', {
-          method: isCurrentlyLiked ? 'DELETE' : 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            postId,
-            postType: oppositeType
-          })
-        });
-        
-        if (lastAttemptResponse.ok) {
-          console.log('Last attempt with opposite type succeeded');
-          return;
-        }
-        
-        // If still failed, revert optimistic update
+        // If failed, revert optimistic update
         setLikedPosts({ ...likedPosts, [postId]: isCurrentlyLiked })
         setLikeCount({ 
           ...likeCount, 
@@ -214,13 +137,12 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
             : (likeCount[postId] || 0) - 1 
         })
         
-        // Try to get error details from the last response
+        let errorMessage = response.statusText || "Failed to update like status";
         try {
-          const errorData = await lastAttemptResponse.json();
-          console.error('Final error details:', errorData);
-          errorMessage = errorData.error || lastAttemptResponse.statusText;
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
         } catch (parseError) {
-          console.error('Could not parse final error response:', parseError);
+          console.error('Could not parse error response:', parseError);
         }
         
         throw new Error(`Failed to update like status: ${errorMessage}`);
@@ -236,6 +158,24 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
       setIsLiking({ ...isLiking, [postId]: false })
     }
   }
+
+  const handleImageLoad = (postId: string) => {
+    setImageLoadingStates(prev => ({
+      ...prev,
+      [postId]: false
+    }));
+  };
+
+  const handleImageError = (postId: string) => {
+    setImageLoadingStates(prev => ({
+      ...prev,
+      [postId]: false
+    }));
+    setImageErrorStates(prev => ({
+      ...prev,
+      [postId]: true
+    }));
+  };
 
   if (!posts.length) {
     return (
@@ -283,33 +223,32 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
             )}
             <p className="whitespace-pre-wrap">{post.content}</p>
             {/* Check if there's an image in either Post or ImagePost */}
-            {(('image' in post && post.image) || (post as any).image) && (
-              <div className="mt-4 relative aspect-video rounded-md overflow-hidden">
-                {/* Get the image from either type of post */}
-                {(() => {
-                  const imageUrl = ('image' in post) ? post.image : (post as any).image;
-                  if (typeof imageUrl === 'string' && imageUrl.startsWith('data:image')) {
-                    // Display base64 image
-                    return (
-                      <img 
-                        src={imageUrl} 
-                        alt={post.title}
-                        className="object-cover w-full h-full"
-                      />
-                    );
-                  } else if (typeof imageUrl === 'string') {
-                    // Fallback for non-base64 images
-                    return (
-                      <Image
-                        src={imageUrl}
-                        alt={post.title}
-                        fill
-                        className="object-cover"
-                      />
-                    );
-                  }
-                  return null;
-                })()}
+            {post.imageUrl && (
+              <div className="mt-3 relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
+                {imageLoadingStates[post.id] && !imageErrorStates[post.id] && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-8 w-8 animate-pulse">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  </div>
+                )}
+                {imageErrorStates[post.id] && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Failed to load image</p>
+                  </div>
+                )}
+                <Image
+                  src={post.imageUrl}
+                  alt="Post image"
+                  fill
+                  className={`object-cover transition-opacity duration-300 ${
+                    imageLoadingStates[post.id] ? "opacity-0" : "opacity-100"
+                  }`}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  onLoad={() => handleImageLoad(post.id)}
+                  onError={() => handleImageError(post.id)}
+                />
               </div>
             )}
           </CardContent>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 
 export async function POST(request: Request) {
   try {
@@ -11,14 +11,15 @@ export async function POST(request: Request) {
     }
 
     const json = await request.json()
-    const { title, content, published, event, image } = json
+    const { title, content, published, event, imageUrl, imageKey } = json
 
     const post = await prisma.post.create({
       data: {
         title,
         content,
         published,
-        ...(image && { image }),
+        ...(imageUrl && { imageUrl }),
+        ...(imageKey && { imageKey }),
         author: {
           connect: { id: session.user.id }
         },

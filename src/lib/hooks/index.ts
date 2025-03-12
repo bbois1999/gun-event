@@ -10,7 +10,6 @@ export * from './like';
 export * from './notification';
 export * from './follow';
 export * from './post';
-export * from './image-post';
 export * from './event';
 export * from './session';
 export * from './account';

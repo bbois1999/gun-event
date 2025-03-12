@@ -1,6 +1,6 @@
-import type { NextConfig } from "next";
+import { type NextConfig } from "next";
 
-const config: NextConfig = {
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
@@ -11,8 +11,18 @@ const config: NextConfig = {
         protocol: "https",
         hostname: "api.dicebear.com",
       },
+      {
+        protocol: 'https',
+        hostname: 'uploadthing.com',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'utfs.io',
+        pathname: '**',
+      },
     ],
   },
 };
 
-export default config;
+export default nextConfig;

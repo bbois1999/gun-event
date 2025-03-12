@@ -24,7 +24,6 @@ model User {
   otpSecret         String?
   otpExpiry         DateTime?
   posts             Post[]
-  imagePosts        ImagePost[]
   events            Event[]
   followedBy        Follow[]       @relation("follower")
   following         Follow[]       @relation("following")
@@ -37,32 +36,28 @@ model User {
 
 /// Like model for post likes
 model Like {
-  id          String     @id() @default(cuid())
-  createdAt   DateTime   @default(now())
-  user        User       @relation(fields: [userId], references: [id])
-  userId      String
-  post        Post?      @relation(fields: [postId], references: [id])
-  postId      String?
-  imagePost   ImagePost? @relation(fields: [imagePostId], references: [id])
-  imagePostId String?
+  id        String   @id() @default(cuid())
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    String
 
   @@unique([userId, postId])
-  @@unique([userId, imagePostId])
 }
 
 /// Notification model
 model Notification {
-  id          String   @id() @default(cuid())
-  createdAt   DateTime @default(now())
-  read        Boolean  @default(false)
-  type        String
-  message     String
-  postId      String?
-  imagePostId String?
-  user        User     @relation("userNotifications", fields: [userId], references: [id])
-  userId      String
-  sender      User?    @relation("notificationSender", fields: [senderId], references: [id])
-  senderId    String?
+  id        String   @id() @default(cuid())
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+  type      String
+  message   String
+  postId    String?
+  user      User     @relation("userNotifications", fields: [userId], references: [id])
+  userId    String
+  sender    User?    @relation("notificationSender", fields: [senderId], references: [id])
+  senderId  String?
 }
 
 /// Follow relationship model
@@ -85,24 +80,10 @@ model Post {
   title     String
   content   String
   published Boolean  @default(false)
-  image     String?
+  imageUrl  String?
+  imageKey  String?
   author    User     @relation(fields: [authorId], references: [id])
   authorId  String
-  event     Event?   @relation(fields: [eventId], references: [id])
-  eventId   String?
-  likes     Like[]
-}
-
-model ImagePost {
-  id        String   @id() @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt()
-  title     String
-  content   String
-  published Boolean  @default(false)
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
-  image     String
   event     Event?   @relation(fields: [eventId], references: [id])
   eventId   String?
   likes     Like[]
@@ -110,18 +91,17 @@ model ImagePost {
 
 /// Gun Show Event model
 model Event {
-  id          String      @id() @default(cuid())
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt()
+  id          String   @id() @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt()
   title       String
   description String
   date        DateTime
   location    String
   organizer   String
-  author      User        @relation(fields: [authorId], references: [id])
+  author      User     @relation(fields: [authorId], references: [id])
   authorId    String
   posts       Post[]
-  imagePosts  ImagePost[]
 }
 
 /// NextAuth Session model

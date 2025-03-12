@@ -328,7 +328,7 @@ export function useSuspenseCountNotification<TArgs extends Prisma.NotificationCo
     return useSuspenseModelQuery<TQueryFnData, TData, TError>('Notification', `${endpoint}/notification/count`, args, options, fetch);
 }
 
-export function useCheckNotification<TError = DefaultError>(args: { operation: PolicyCrudKind; where?: { id?: string; read?: boolean; type?: string; message?: string; postId?: string; imagePostId?: string; userId?: string; senderId?: string }; }, options?: (Omit<UseQueryOptions<boolean, TError, boolean>, 'queryKey'> & ExtraQueryOptions)) {
+export function useCheckNotification<TError = DefaultError>(args: { operation: PolicyCrudKind; where?: { id?: string; read?: boolean; type?: string; message?: string; postId?: string; userId?: string; senderId?: string }; }, options?: (Omit<UseQueryOptions<boolean, TError, boolean>, 'queryKey'> & ExtraQueryOptions)) {
     const { endpoint, fetch } = getHooksContext();
     return useModelQuery<boolean, boolean, TError>('Notification', `${endpoint}/notification/check`, args, options, fetch);
 }

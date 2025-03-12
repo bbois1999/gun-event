@@ -29,7 +29,6 @@ model User {
     otpSecret      String?  // For storing current OTP
     otpExpiry      DateTime? // OTP expiration timestamp
     posts          Post[]
-    imagePosts     ImagePost[]
     events         Event[]  // User can create events
     
     // Follow relationships
@@ -63,23 +62,18 @@ model Like {
     user       User     @relation(fields: [userId], references: [id])
     userId     String
     
-    // Post that was liked (can be null if it was an ImagePost)
-    post       Post?    @relation(fields: [postId], references: [id])
-    postId     String?
-    
-    // ImagePost that was liked (can be null if it was a regular Post)
-    imagePost  ImagePost? @relation(fields: [imagePostId], references: [id])
-    imagePostId String?
+    // Post that was liked
+    post       Post     @relation(fields: [postId], references: [id])
+    postId     String
     
     // Ensure a user can only like a post once
     @@unique([userId, postId])
-    @@unique([userId, imagePostId])
     
     // Allow a user to like/unlike posts
     @@allow('create,delete', auth() == user)
     
     // Allow read access to post author and the liker
-    @@allow('read', post.author == auth() || imagePost.author == auth() || user == auth())
+    @@allow('read', post.author == auth() || user == auth())
 }
 
 /// Notification model
@@ -92,7 +86,6 @@ model Notification {
     
     // Link to the related content
     postId     String?  // Optional: ID of the related post
-    imagePostId String? // Optional: ID of the related image post
     
     // User who receives the notification
     user       User     @relation("userNotifications", fields: [userId], references: [id])
@@ -140,31 +133,13 @@ model Post {
     title     String   @length(1, 256)
     content   String
     published Boolean  @default(false)
-    image     String?  // Optional image field to store base64 images
-    author    User     @relation(fields: [authorId], references: [id])
-    authorId  String
-    event     Event?   @relation(fields: [eventId], references: [id])
-    eventId   String?
-    likes     Like[]   // Relation to likes
     
-    // allow read for all signin users
-    @@allow('read', auth() != null && published)
-
-    // full access by author
-    @@allow('all', author == auth())
-}
-
-// make this allow image uploads
-model ImagePost {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    title     String   @length(1, 256)
-    content   String
-    published Boolean  @default(false)
+    // Image handling with UploadThing
+    imageUrl  String?  // URL for the uploaded image
+    imageKey  String?  // UploadThing file key for deletion
+    
     author    User     @relation(fields: [authorId], references: [id])
     authorId  String
-    image     String
     event     Event?   @relation(fields: [eventId], references: [id])
     eventId   String?
     likes     Like[]   // Relation to likes
@@ -189,7 +164,6 @@ model Event {
     author      User        @relation(fields: [authorId], references: [id])
     authorId    String
     posts       Post[]
-    imagePosts  ImagePost[]
     
     // Allow read access to everyone for public events
     @@allow('read', true)
