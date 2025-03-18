@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -34,8 +34,8 @@ export function ImageGallery({
   const galleryRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   
-  // Control visibility timeout
-  let controlsTimeout: NodeJS.Timeout | null = null;
+  // Store the timeout ID in a ref to prevent issues with stale closures
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize loading states
   useEffect(() => {
@@ -44,6 +44,25 @@ export function ImageGallery({
     // Reset zoom state when images change
     setIsZoomed(false);
   }, [images.length]);
+
+  // Create a stable resetControlsTimeout function with useCallback
+  const resetControlsTimeout = useCallback(() => {
+    // Clear existing timeout
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = null;
+    }
+    
+    // Show controls
+    setShowControls(true);
+    
+    // Set a new timeout to hide controls after 3 seconds of inactivity
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (!isZoomed) { // Don't auto-hide controls when zoomed
+        setShowControls(false);
+      }
+    }, 3000);
+  }, [isZoomed]);
 
   const handlePrev = (e?: React.MouseEvent) => {
     if (e) {
@@ -109,30 +128,36 @@ export function ImageGallery({
     resetControlsTimeout();
   };
   
-  const resetControlsTimeout = () => {
-    // Clear existing timeout
-    if (controlsTimeout) {
-      clearTimeout(controlsTimeout);
+  // Force controls to show on mouse movement
+  const handleMouseMove = useCallback(() => {
+    if (!showControls) {
+      setShowControls(true);
+      resetControlsTimeout();
     }
-    
-    // Show controls
-    setShowControls(true);
-    
-    // Set a new timeout to hide controls after 3 seconds of inactivity
-    controlsTimeout = setTimeout(() => {
-      if (!isZoomed) { // Don't auto-hide controls when zoomed
-        setShowControls(false);
-      }
-    }, 3000);
-  };
+  }, [showControls, resetControlsTimeout]);
   
   // Swipe handlers for mobile
   const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => handleNext(),
-    onSwipedRight: () => handlePrev(),
-    onSwipedUp: () => setFullscreen(false),
-    onTap: () => handleDialogClick(),
-    trackMouse: true
+    onSwipedLeft: () => {
+      console.log("Swiped left");
+      handleNext();
+    },
+    onSwipedRight: () => {
+      console.log("Swiped right");
+      handlePrev();
+    },
+    onSwipedUp: () => {
+      console.log("Swiped up");
+      setFullscreen(false);
+    },
+    onTap: () => {
+      console.log("Tapped");
+      handleDialogClick();
+    },
+    trackMouse: true,
+    preventScrollOnSwipe: true,
+    delta: 10, // Minimum swipe distance
+    rotationAngle: 0
   });
 
   // Handle keyboard navigation
@@ -166,11 +191,8 @@ export function ImageGallery({
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
-      if (controlsTimeout) {
-        clearTimeout(controlsTimeout);
-      }
     };
-  }, [fullscreen, isZoomed]);
+  }, [fullscreen, isZoomed, resetControlsTimeout]);
   
   // Setup auto-hide for controls on fullscreen
   useEffect(() => {
@@ -179,11 +201,12 @@ export function ImageGallery({
     }
     
     return () => {
-      if (controlsTimeout) {
-        clearTimeout(controlsTimeout);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = null;
       }
     };
-  }, [fullscreen]);
+  }, [fullscreen, resetControlsTimeout]);
 
   // Simple case: single image
   if (images.length === 1) {
@@ -342,7 +365,21 @@ export function ImageGallery({
       </div>
 
       {/* Fullscreen dialog */}
-      <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+      <Dialog 
+        open={fullscreen} 
+        onOpenChange={(open) => {
+          // When closing, ensure we reset everything
+          if (!open) {
+            setIsZoomed(false);
+            setShowControls(true);
+            if (controlsTimeoutRef.current) {
+              clearTimeout(controlsTimeoutRef.current);
+              controlsTimeoutRef.current = null;
+            }
+          }
+          setFullscreen(open);
+        }}
+      >
         <DialogContent 
           {...swipeHandlers}
           className={cn(
@@ -354,6 +391,7 @@ export function ImageGallery({
             ref={dialogRef}
             className="relative w-full h-[90vh] flex items-center justify-center overflow-hidden"
             onClick={isZoomed ? toggleZoom : handleDialogClick}
+            onMouseMove={handleMouseMove}
           >
             {/* Close button */}
             {showControls && (
@@ -439,6 +477,21 @@ export function ImageGallery({
                 <ChevronRight className="h-10 w-10" />
               </Button>
             )}
+
+            {/* Show controls button (always visible) */}
+            <Button
+              variant="secondary"
+              size="icon"
+              className="absolute right-2 top-2 text-white z-50 opacity-50 hover:opacity-100"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowControls(true);
+                resetControlsTimeout();
+              }}
+              style={{ display: showControls ? 'none' : 'flex' }}
+            >
+              <Info className="h-5 w-5" />
+            </Button>
 
             {/* Zoom toggle button */}
             {showControls && (
