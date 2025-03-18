@@ -58,7 +58,24 @@ export async function GET(request: Request) {
       take: 100 // Increased limit for post feed
     });
 
-    return NextResponse.json(posts)
+    // Manually fetch images for each post
+    const postsWithImages = await Promise.all(posts.map(async (post) => {
+      // Get images for this post using raw SQL query
+      const images = await prisma.$queryRaw`
+        SELECT id, createdAt, updatedAt, url, key, position, postId 
+        FROM PostImage 
+        WHERE postId = ${post.id} 
+        ORDER BY position ASC
+      `;
+      
+      // Add images to the post
+      return {
+        ...post,
+        images: images || [] // Return empty array if no images found
+      };
+    }));
+
+    return NextResponse.json(postsWithImages)
   } catch (error) {
     console.error('Error in feed API:', error)
     return NextResponse.json(

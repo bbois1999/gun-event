@@ -1,18 +1,18 @@
 "use client"
 
-import { type Post, type ImagePost } from '@/src/types/models'
+import { type Post, type ImagePost, type PostImage } from '@/src/types/models'
 import { format } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import Image from 'next/image'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Calendar, Heart } from 'lucide-react'
+import { Calendar, Heart, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
-import { ImageIcon } from 'lucide-react'
+import { ImageGallery, GalleryImage } from '@/components/ui/image-gallery'
 
 type Like = {
   id: string
@@ -33,6 +33,8 @@ type CombinedPost = Post & {
     likes: number
   }
   imageUrl?: string
+  imageKey?: string
+  images?: PostImage[]
 }
 
 interface EventPostFeedProps {
@@ -69,17 +71,21 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
     setLikeCount(initialLikeCount)
   }, [posts, session])
 
-  // initialize image loading states at the beginning
+  // Update the image loading initialization to make it more robust
   useEffect(() => {
     const initialImageLoadingStates: Record<string, boolean> = {};
+    const initialImageErrorStates: Record<string, boolean> = {};
     
     posts.forEach(post => {
-      if (post.imageUrl) {
-        initialImageLoadingStates[post.id] = true;
+      if (post.imageUrl || (post.images && post.images.length > 0)) {
+        // Start with images not in loading state to prevent flashing
+        initialImageLoadingStates[post.id] = false;
+        initialImageErrorStates[post.id] = false;
       }
     });
     
     setImageLoadingStates(initialImageLoadingStates);
+    setImageErrorStates(initialImageErrorStates);
   }, [posts]);
 
   const handleLikeToggle = async (post: CombinedPost) => {
@@ -177,6 +183,47 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
     }));
   };
 
+  // Helper function to get all images for a post
+  const getPostImages = (post: CombinedPost): GalleryImage[] => {
+    const images: GalleryImage[] = [];
+    
+    // Add main image if exists
+    if (post.imageUrl) {
+      images.push({ 
+        url: post.imageUrl, 
+        key: post.imageKey || '',
+        id: 'main-image'
+      });
+    }
+    
+    // Add additional images if they exist
+    if (post.images && post.images.length > 0) {
+      // Sort by position
+      const sortedImages = [...post.images].sort((a, b) => a.position - b.position);
+      
+      // Add to the array
+      images.push(...sortedImages.map(img => ({
+        url: img.url,
+        key: img.key,
+        id: img.id
+      })));
+    }
+    
+    console.log(`Post ${post.id} has ${images.length} images:`, images);
+    return images;
+  };
+
+  // Gallery image handlers
+  const handleGalleryImageLoad = (postId: string, imageIndex: number) => {
+    // Update loading state for the post
+    handleImageLoad(postId);
+  };
+
+  const handleGalleryImageError = (postId: string, imageIndex: number) => {
+    // Update error state for the post
+    handleImageError(postId);
+  };
+
   if (!posts.length) {
     return (
       <div className="text-center text-muted-foreground">
@@ -222,33 +269,29 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
               </div>
             )}
             <p className="whitespace-pre-wrap">{post.content}</p>
-            {/* Check if there's an image in either Post or ImagePost */}
-            {post.imageUrl && (
-              <div className="mt-3 relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
-                {imageLoadingStates[post.id] && !imageErrorStates[post.id] && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-8 w-8 animate-pulse">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  </div>
-                )}
-                {imageErrorStates[post.id] && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Failed to load image</p>
-                  </div>
-                )}
-                <Image
-                  src={post.imageUrl}
-                  alt="Post image"
-                  fill
-                  className={`object-cover transition-opacity duration-300 ${
-                    imageLoadingStates[post.id] ? "opacity-0" : "opacity-100"
-                  }`}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  onLoad={() => handleImageLoad(post.id)}
-                  onError={() => handleImageError(post.id)}
+            {/* Check for images and use the gallery component if available */}
+            {(post.imageUrl || (post.images && post.images.length > 0)) && (
+              <div className="mt-4">
+                {/* Console log for debugging */}
+                <ImageGallery
+                  images={getPostImages(post)}
+                  containerClassName="rounded-lg overflow-hidden bg-muted"
+                  onImageLoad={(index) => {
+                    console.log(`Image ${index} loaded for post ${post.id}`);
+                    handleGalleryImageLoad(post.id, index);
+                  }}
+                  onImageError={(index) => {
+                    console.log(`Image ${index} error for post ${post.id}`);
+                    handleGalleryImageError(post.id, index);
+                  }}
                 />
+                
+                {/* Add indicator for multiple images */}
+                {getPostImages(post).length > 1 && (
+                  <div className="mt-2 text-xs text-center text-muted-foreground">
+                    <p>Click the image to view all {getPostImages(post).length} photos in fullscreen</p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

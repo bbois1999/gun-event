@@ -97,6 +97,12 @@ const metadata = {
                     isDataModel: true,
                     isArray: true,
                     backLink: 'user',
+                }, imagePosts: {
+                    name: "imagePosts",
+                    type: "ImagePost",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'author',
                 },
             }
             , uniqueConstraints: {
@@ -342,6 +348,60 @@ const metadata = {
                     isDataModel: true,
                     isArray: true,
                     backLink: 'post',
+                }, images: {
+                    name: "images",
+                    type: "PostImage",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'post',
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                },
+            }
+            ,
+        }
+        ,
+        postImage: {
+            name: 'PostImage', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, updatedAt: {
+                    name: "updatedAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@updatedAt", "args": [] }],
+                }, url: {
+                    name: "url",
+                    type: "String",
+                }, key: {
+                    name: "key",
+                    type: "String",
+                }, position: {
+                    name: "position",
+                    type: "Int",
+                    attributes: [{ "name": "@default", "args": [{ "value": 0 }] }],
+                }, post: {
+                    name: "post",
+                    type: "Post",
+                    isDataModel: true,
+                    backLink: 'images',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "postId" },
+                }, postId: {
+                    name: "postId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'post',
                 },
             }
             , uniqueConstraints: {
@@ -398,6 +458,12 @@ const metadata = {
                 }, posts: {
                     name: "posts",
                     type: "Post",
+                    isDataModel: true,
+                    isArray: true,
+                    backLink: 'event',
+                }, imagePosts: {
+                    name: "imagePosts",
+                    type: "ImagePost",
                     isDataModel: true,
                     isArray: true,
                     backLink: 'event',
@@ -521,10 +587,76 @@ const metadata = {
             ,
         }
         ,
+        imagePost: {
+            name: 'ImagePost', fields: {
+                id: {
+                    name: "id",
+                    type: "String",
+                    isId: true,
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, title: {
+                    name: "title",
+                    type: "String",
+                }, content: {
+                    name: "content",
+                    type: "String",
+                }, published: {
+                    name: "published",
+                    type: "Boolean",
+                    attributes: [{ "name": "@default", "args": [{ "value": false }] }],
+                }, createdAt: {
+                    name: "createdAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@default", "args": [] }],
+                }, updatedAt: {
+                    name: "updatedAt",
+                    type: "DateTime",
+                    attributes: [{ "name": "@updatedAt", "args": [] }],
+                }, image: {
+                    name: "image",
+                    type: "String",
+                }, authorId: {
+                    name: "authorId",
+                    type: "String",
+                    isForeignKey: true,
+                    relationField: 'author',
+                }, eventId: {
+                    name: "eventId",
+                    type: "String",
+                    isOptional: true,
+                    isForeignKey: true,
+                    relationField: 'event',
+                }, author: {
+                    name: "author",
+                    type: "User",
+                    isDataModel: true,
+                    backLink: 'imagePosts',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "authorId" },
+                }, event: {
+                    name: "event",
+                    type: "Event",
+                    isDataModel: true,
+                    isOptional: true,
+                    backLink: 'imagePosts',
+                    isRelationOwner: true,
+                    foreignKeyMapping: { "id": "eventId" },
+                },
+            }
+            , uniqueConstraints: {
+                id: {
+                    name: "id",
+                    fields: ["id"]
+                },
+            }
+            ,
+        }
+        ,
     }
     ,
     deleteCascade: {
         user: ['Session', 'Account'],
+        post: ['PostImage'],
     }
     ,
     authModel: 'User'

@@ -32,6 +32,7 @@ model User {
   notificationsSent Notification[] @relation("notificationSender")
   accounts          Account[]
   sessions          Session[]
+  imagePosts        ImagePost[]
 }
 
 /// Like model for post likes
@@ -74,34 +75,50 @@ model Follow {
 
 /// Post model
 model Post {
+  id        String      @id() @default(cuid())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt()
+  title     String
+  content   String
+  published Boolean     @default(false)
+  imageUrl  String?
+  imageKey  String?
+  author    User        @relation(fields: [authorId], references: [id])
+  authorId  String
+  event     Event?      @relation(fields: [eventId], references: [id])
+  eventId   String?
+  likes     Like[]
+  images    PostImage[]
+}
+
+/// PostImage model for storing multiple images per post
+model PostImage {
   id        String   @id() @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt()
-  title     String
-  content   String
-  published Boolean  @default(false)
-  imageUrl  String?
-  imageKey  String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
-  event     Event?   @relation(fields: [eventId], references: [id])
-  eventId   String?
-  likes     Like[]
+  url       String
+  key       String
+  position  Int      @default(0)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+
+  @@index([postId])
 }
 
 /// Gun Show Event model
 model Event {
-  id          String   @id() @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt()
+  id          String      @id() @default(cuid())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt()
   title       String
   description String
   date        DateTime
   location    String
   organizer   String
-  author      User     @relation(fields: [authorId], references: [id])
+  author      User        @relation(fields: [authorId], references: [id])
   authorId    String
   posts       Post[]
+  imagePosts  ImagePost[]
 }
 
 /// NextAuth Session model
@@ -130,4 +147,19 @@ model Account {
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+}
+
+/// Image Post model (legacy)
+model ImagePost {
+  id        String   @id() @default(cuid())
+  title     String
+  content   String
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+  image     String
+  authorId  String
+  eventId   String?
+  author    User     @relation(fields: [authorId], references: [id])
+  event     Event?   @relation(fields: [eventId], references: [id])
 }

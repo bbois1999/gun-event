@@ -4,40 +4,46 @@ import { createUploadthing, type FileRouter } from "uploadthing/next";
 console.log("UploadThing initialization starting");
 console.log("Environment:", {
   NODE_ENV: process.env.NODE_ENV,
-  USING_SDK_V7_TOKEN: true
+  // Only log whether the token is set, not the actual value for security
+  TOKEN_SET: !!process.env.UPLOADTHING_TOKEN
 });
 
-// SDK v7+ token format (base64 encoded JSON with apiKey, appId, and regions)
-const HARDCODED_V7_TOKEN = 'eyJhcGlLZXkiOiJza19saXZlX2YzZmI3NTg3ZjNjOGI5MDNhZTY5NTI2MWIxODRhYzcwZTE4MjY0MDMxZTczNjkxMjI4NDYyZDk0NGI1ODRhMGYiLCJhcHBJZCI6ImFwN3l6YjlsNGkiLCJyZWdpb25zIjpbInNlYTEiXX0=';
+const f = createUploadthing();
 
-const f = createUploadthing({
-  errorFormatter: (err) => {
-    console.error("UploadThing Error:", err);
-    return { message: err.message };
-  },
-});
+const auth = (req: Request) => ({ id: "fakeId" }); // Fake auth function
 
-// Define file size and type restrictions
-const MAX_FILE_SIZE = "4MB";
-
-// Define our file router with extensive logging
+// FileRouter for your app, can contain multiple FileRoutes
 export const ourFileRouter = {
-  // Define a route for post image uploads with simplified middleware for testing
-  postImage: f({ image: { maxFileSize: MAX_FILE_SIZE } })
-    .middleware(async () => {
-      console.log("UploadThing middleware processing request");
-      // Force the v7+ token into the environment variable
-      process.env.UPLOADTHING_TOKEN = HARDCODED_V7_TOKEN;
-      return { userId: "test-user" };
+  // Define as many FileRoutes as you like, each with a unique route key
+  profileImage: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    // Set permissions and file types for this FileRoute
+    .middleware(async ({ req }) => {
+      // This code runs on your server before upload
+      const user = await auth(req);
+
+      // If you throw, the user will not be able to upload
+      if (!user) throw new Error("Unauthorized");
+
+      // Whatever is returned here is accessible in onUploadComplete as `metadata`
+      return { userId: user.id };
     })
-    .onUploadComplete(async ({ file, metadata }) => {
-      console.log("UploadThing upload successful:", file.url);
-      
-      return { 
-        uploadedBy: metadata.userId,
-        fileUrl: file.url,
-        fileKey: file.key
-      };
+    .onUploadComplete(async ({ metadata, file }) => {
+      // This code RUNS ON YOUR SERVER after upload
+      console.log("Upload complete for userId:", metadata.userId);
+
+      console.log("file url", file.url);
+    }),
+  
+  // Route for post images
+  postImage: f({ image: { maxFileSize: "16MB", maxFileCount: 10 } })
+    .middleware(async ({ req }) => {
+      // For now, we're allowing all uploads
+      // In a real app, you'd want to check if the user is authenticated
+      return { userId: "any" };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Post image uploaded:", file.url);
+      return { url: file.url, key: file.key };
     }),
 } satisfies FileRouter;
 

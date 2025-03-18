@@ -21,6 +21,7 @@ import { Loader2, Image as ImageIcon } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { EventSelector } from './EventSelector'
 import { useUploadThing } from '@/lib/uploadthing-react'
+import { ImageUpload, ImageFile } from '@/components/ui/image-upload'
 
 interface PostCreationDialogProps {
   triggerButton?: React.ReactNode
@@ -37,14 +38,12 @@ export function PostCreationDialog({
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [image, setImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [images, setImages] = useState<ImageFile[] | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(preselectedEvent || null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
   const createPost = useCreatePost()
-  const { startUpload, isUploading } = useUploadThing("postImage")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,37 +51,46 @@ export function PostCreationDialog({
 
     setIsSubmitting(true)
     try {
-      let imageUrl = null;
-      let imageKey = null;
-      
-      // Upload image to UploadThing if selected
-      if (image) {
-        console.log("Uploading image to UploadThing:", image.name);
-        const uploadResult = await startUpload([image]);
-        
-        if (uploadResult && uploadResult[0]) {
-          imageUrl = uploadResult[0].url;
-          imageKey = uploadResult[0].key;
-          console.log("Image uploaded successfully:", imageUrl);
-        } else {
-          throw new Error("Failed to upload image");
-        }
+      // Create the post with image details if available
+      const postData = {
+        title,
+        content,
+        published: true,
+        ...(images && images.length > 0 && {
+          imageUrl: images[0].url,
+          imageKey: images[0].key,
+        }),
+        ...(selectedEvent && {
+          eventId: selectedEvent.id 
+        })
+      };
+
+      console.log("Creating post with data:", postData);
+      console.log("Images:", images);
+
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...postData,
+          // Add additional images if there are more than one
+          additionalImages: images && images.length > 1 
+            ? images.slice(1).map((img, i) => ({
+                url: img.url,
+                key: img.key,
+                position: i + 1, // Position 0 is the main image
+              }))
+            : undefined
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create post");
       }
 
-      // Create the post with image details if available
-      await createPost.mutateAsync({
-        data: {
-          title,
-          content,
-          published: true,
-          ...(imageUrl && { imageUrl }),
-          ...(imageKey && { imageKey }),
-          author: { connect: { id: session.user.id } },
-          ...(selectedEvent && {
-            event: { connect: { id: selectedEvent.id } }
-          })
-        }
-      })
+      const result = await response.json();
 
       toast({
         title: "Success!",
@@ -92,8 +100,7 @@ export function PostCreationDialog({
       // Reset form
       setTitle('')
       setContent('')
-      setImage(null)
-      setImagePreview(null)
+      setImages(null)
       setSelectedEvent(preselectedEvent || null)
       setOpen(false)
       onSuccess?.()
@@ -106,17 +113,6 @@ export function PostCreationDialog({
       })
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFile = e.target.files[0]
-      setImage(selectedFile)
-      
-      // Generate preview for the image
-      const previewUrl = URL.createObjectURL(selectedFile)
-      setImagePreview(previewUrl)
     }
   }
 
@@ -155,32 +151,14 @@ export function PostCreationDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="image">Image</Label>
+              <Label>Images (up to 10)</Label>
               <div className="flex flex-col gap-3">
-                <Input
-                  id="image"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="cursor-pointer"
+                <ImageUpload
+                  value={images}
+                  onChange={setImages}
+                  disabled={isSubmitting}
+                  maxImages={10}
                 />
-                {imagePreview && (
-                  <div className="relative aspect-video bg-muted rounded-md overflow-hidden mt-2">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
-                )}
-                {!imagePreview && (
-                  <div className="flex items-center justify-center aspect-video bg-muted rounded-md border border-dashed p-4">
-                    <div className="flex flex-col items-center text-muted-foreground">
-                      <ImageIcon className="h-10 w-10 mb-2" />
-                      <span>No image selected</span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             <div className="grid gap-2">
@@ -192,11 +170,11 @@ export function PostCreationDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting || isUploading}>
-              {isSubmitting || isUploading ? (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isUploading ? 'Uploading...' : 'Creating...'}
+                  Creating...
                 </>
               ) : (
                 'Create Post'

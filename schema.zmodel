@@ -51,6 +51,7 @@ model User {
     // NextAuth session relationship
     accounts      Account[]
     sessions      Session[]
+    imagePosts    ImagePost[]
 }
 
 /// Like model for post likes
@@ -143,12 +144,34 @@ model Post {
     event     Event?   @relation(fields: [eventId], references: [id])
     eventId   String?
     likes     Like[]   // Relation to likes
+    images    PostImage[] // Relation to additional images
     
     // allow read for all signin users
     @@allow('read', auth() != null && published)
 
     // full access by author
     @@allow('all', author == auth())
+}
+
+/// PostImage model for storing multiple images per post
+model PostImage {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    url       String   // URL for the uploaded image
+    key       String   // UploadThing file key for deletion
+    position  Int      @default(0) // Position in the gallery
+    
+    post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+    postId    String
+    
+    @@index([postId])
+    
+    // Allow read for all signin users who can read the post
+    @@allow('read', auth() != null && post.published)
+    
+    // Full access by post author
+    @@allow('all', post.author == auth())
 }
 
 /// Gun Show Event model
@@ -164,6 +187,7 @@ model Event {
     author      User        @relation(fields: [authorId], references: [id])
     authorId    String
     posts       Post[]
+    imagePosts  ImagePost[]
     
     // Allow read access to everyone for public events
     @@allow('read', true)
@@ -199,4 +223,26 @@ model Account {
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([provider, providerAccountId])
+}
+
+/// Image Post model (legacy)
+model ImagePost {
+    id        String   @id @default(cuid())
+    title     String
+    content   String
+    published Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    image     String
+    authorId  String
+    eventId   String?
+
+    author    User     @relation(fields: [authorId], references: [id])
+    event     Event?   @relation(fields: [eventId], references: [id])
+    
+    // allow read for all signin users
+    @@allow('read', auth() != null && published)
+
+    // full access by author
+    @@allow('all', author == auth())
 }

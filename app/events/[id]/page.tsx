@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { PostButton } from "@/components/PostButton"
 import { Metadata } from 'next'
 import { unstable_noStore as noStore } from 'next/cache'
+import { Post, PostImage } from "@/src/types/models"
 
 interface EventPageProps {
   params: {
@@ -32,6 +33,26 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
   }
 }
 
+// Interface for the expected post format in EventPostFeed
+type CombinedPost = Post & {
+  author: {
+    id: string
+    email: string
+  }
+  event?: {
+    id: string
+    title: string
+  }
+  likes?: {
+    id: string
+    userId: string
+  }[]
+  _count?: {
+    likes: number
+  }
+  images?: PostImage[]
+}
+
 export default async function EventPage({ params }: EventPageProps) {
   // Disable caching for this page to ensure fresh data
   noStore()
@@ -42,43 +63,71 @@ export default async function EventPage({ params }: EventPageProps) {
   }
 
   try {
-    // Fetch event with all related posts
+    // First, fetch the event details
     const event = await prisma.event.findUnique({
-      where: { id },
-      include: {
-        posts: {
-          include: {
-            author: true
-          },
-          where: {
-            published: true
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        },
-        imagePosts: {
-          include: {
-            author: true
-          },
-          where: {
-            published: true
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        }
-      }
+      where: { id }
     })
 
     if (!event) {
       return notFound()
     }
 
-    // Combine and sort all posts by creation date
-    const allPosts = [...event.posts, ...event.imagePosts].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
+    // Separately fetch posts related to this event with all needed data
+    const eventPosts = await prisma.post.findMany({
+      where: {
+        eventId: id,
+        published: true
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+          }
+        },
+        likes: true,
+        _count: {
+          select: {
+            likes: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    // Fetch images for each post and convert to the expected format
+    const postsWithImages: CombinedPost[] = await Promise.all(eventPosts.map(async (post) => {
+      // Get images for this post using raw SQL
+      const imagesRaw = await prisma.$queryRaw`
+        SELECT id, createdAt, updatedAt, url, key, position, postId 
+        FROM PostImage 
+        WHERE postId = ${post.id} 
+        ORDER BY position ASC
+      `;
+      
+      // Convert raw images to expected PostImage type
+      const images = Array.isArray(imagesRaw) ? imagesRaw.map(img => ({
+        id: String(img.id),
+        url: String(img.url),
+        key: String(img.key),
+        position: Number(img.position),
+        postId: String(img.postId),
+        createdAt: new Date(img.createdAt),
+        updatedAt: new Date(img.updatedAt)
+      })) : [];
+      
+      // Add event details to post
+      return {
+        ...post,
+        images,
+        event: {
+          id: event.id,
+          title: event.title
+        }
+      };
+    }));
 
     return (
       <div className="container max-w-4xl mx-auto py-8">
@@ -89,7 +138,7 @@ export default async function EventPage({ params }: EventPageProps) {
             <h2 className="text-2xl font-semibold mb-6">Event Discussion</h2>
             <PostButton preselectedEvent={event} className="mb-8" />
           </div>
-          <EventPostFeed posts={allPosts} />
+          <EventPostFeed posts={postsWithImages} />
         </div>
       </div>
     )

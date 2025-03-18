@@ -6,7 +6,7 @@ import { PostButton } from "@/components/PostButton"
 import { EventPostFeed } from "@/components/EventPostFeed"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2 } from "lucide-react"
-import { type Post, type ImagePost } from "@/src/types/models"
+import { type Post, type ImagePost, type PostImage } from "@/src/types/models"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -14,11 +14,20 @@ type CombinedPost = (Post | ImagePost) & {
   author: {
     id: string
     email: string
+    username?: string
   }
   event?: {
     id: string
     title: string
   }
+  likes?: {
+    id: string
+    userId: string
+  }[]
+  _count?: {
+    likes: number
+  }
+  images?: PostImage[]
 }
 
 export default function Home() {
