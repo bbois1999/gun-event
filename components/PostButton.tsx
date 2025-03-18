@@ -11,13 +11,15 @@ interface PostButtonProps {
   variant?: "default" | "outline" | "secondary"
   size?: "default" | "sm" | "lg" | "icon"
   className?: string
+  onSuccess?: () => void
 }
 
 export function PostButton({ 
   preselectedEvent, 
   variant = "default",
   size = "default",
-  className 
+  className,
+  onSuccess
 }: PostButtonProps) {
   const { data: session } = useSession()
   const router = useRouter()
@@ -44,7 +46,10 @@ export function PostButton({
         </Button>
       }
       onSuccess={() => {
-        router.refresh()
+        if (onSuccess) {
+          onSuccess();
+        }
+        router.refresh();
       }}
     />
   )

@@ -23,6 +23,8 @@ model User {
   preferredMfa      String         @default("email")
   otpSecret         String?
   otpExpiry         DateTime?
+  profileImageUrl   String?
+  profileImageKey   String?
   posts             Post[]
   events            Event[]
   followedBy        Follow[]       @relation("follower")

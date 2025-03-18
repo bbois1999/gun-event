@@ -24,6 +24,7 @@ export async function GET(
           select: {
             id: true,
             email: true,
+            username: true
           },
         },
         event: {
@@ -50,7 +51,25 @@ export async function GET(
       return NextResponse.json({ error: 'Image post not found' }, { status: 404 });
     }
 
-    return NextResponse.json(imagePost);
+    // Fetch profile image for the author
+    const authorProfile = await prisma.user.findUnique({
+      where: { id: imagePost.authorId },
+      select: {
+        id: true,
+        profileImageUrl: true
+      }
+    });
+
+    // Add profile image to the post author
+    const enrichedImagePost = {
+      ...imagePost,
+      author: {
+        ...imagePost.author,
+        profileImageUrl: authorProfile?.profileImageUrl || null
+      }
+    };
+
+    return NextResponse.json(enrichedImagePost);
   } catch (error) {
     console.error('Error fetching image post:', error);
     return NextResponse.json(

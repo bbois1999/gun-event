@@ -78,6 +78,28 @@ export async function GET(request: Request) {
       take: 100
     });
 
+    // Get author IDs to fetch their profile images
+    const authorIds = [...new Set(posts.map(post => post.authorId))];
+
+    // Fetch profile images for all authors in a single query
+    const authorProfiles = await prisma.user.findMany({
+      where: {
+        id: {
+          in: authorIds
+        }
+      },
+      select: {
+        id: true,
+        profileImageUrl: true
+      }
+    });
+
+    // Create a lookup map for easy access
+    const profileImageLookup = authorProfiles.reduce((acc, author) => {
+      acc[author.id] = author.profileImageUrl;
+      return acc;
+    }, {} as Record<string, string | null>);
+
     // Manually fetch images for each post
     const postsWithImages = await Promise.all(posts.map(async (post) => {
       // Get images for this post using raw SQL query
@@ -88,10 +110,14 @@ export async function GET(request: Request) {
         ORDER BY position ASC
       `;
       
-      // Add images to the post
+      // Add images to the post and enhance author with profile image
       return {
         ...post,
-        images: images || [] // Return empty array if no images found
+        images: images || [], // Return empty array if no images found
+        author: {
+          ...post.author,
+          profileImageUrl: profileImageLookup[post.authorId]
+        }
       };
     }));
 

@@ -28,6 +28,8 @@ declare module "next-auth" {
       image?: string | null;
       username?: string | null;
       phoneNumber?: string | null;
+      profileImageUrl?: string | null;
+      profileImageKey?: string | null;
     }
   }
 }
@@ -72,7 +74,9 @@ export const authOptions: NextAuthOptions = {
               username: true,
               phoneNumber: true,
               otpSecret: true,
-              otpExpiry: true
+              otpExpiry: true,
+              profileImageUrl: true,
+              profileImageKey: true
             }
           });
 
@@ -97,7 +101,9 @@ export const authOptions: NextAuthOptions = {
                   username: true,
                   phoneNumber: true,
                   otpSecret: true,
-                  otpExpiry: true
+                  otpExpiry: true,
+                  profileImageUrl: true,
+                  profileImageKey: true
                 }
               });
               
@@ -118,7 +124,9 @@ export const authOptions: NextAuthOptions = {
                   id: phoneUser.id,
                   email: phoneUser.email,
                   username: phoneUser.username,
-                  phoneNumber: phoneUser.phoneNumber
+                  phoneNumber: phoneUser.phoneNumber,
+                  profileImageUrl: phoneUser.profileImageUrl,
+                  profileImageKey: phoneUser.profileImageKey
                 };
               }
             }
@@ -142,7 +150,9 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             email: user.email,
             username: user.username,
-            phoneNumber: user.phoneNumber
+            phoneNumber: user.phoneNumber,
+            profileImageUrl: user.profileImageUrl,
+            profileImageKey: user.profileImageKey
           };
         } catch (error) {
           console.error("Authentication error:", error);
@@ -177,12 +187,22 @@ export const authOptions: NextAuthOptions = {
     }
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, session, trigger }) {
+      // If we're doing a session update, merge the session data into the token
+      if (trigger === "update" && session) {
+        // Update the token with the new session data
+        return { ...token, ...session.user };
+      }
+
+      // For initial sign-in
       if (user) {
         token.id = user.id;
         token.username = (user as any).username;
         token.phoneNumber = (user as any).phoneNumber;
+        token.profileImageUrl = (user as any).profileImageUrl;
+        token.profileImageKey = (user as any).profileImageKey;
       }
+      
       return token;
     },
     async session({ session, token }) {
@@ -190,6 +210,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
         session.user.phoneNumber = token.phoneNumber as string;
+        session.user.profileImageUrl = token.profileImageUrl as string | null;
+        session.user.profileImageKey = token.profileImageKey as string | null;
       }
       return session;
     }

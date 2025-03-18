@@ -15,6 +15,7 @@ type CombinedPost = (Post | ImagePost) & {
     id: string
     email: string
     username?: string
+    profileImageUrl?: string
   }
   event?: {
     id: string
@@ -37,31 +38,33 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("all")
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        // Fetch all posts
-        const response = await fetch('/api/posts/feed')
-        if (!response.ok) throw new Error('Failed to fetch posts')
-        const data = await response.json()
-        setPosts(data)
+  // Function to refresh posts
+  const refreshPosts = async () => {
+    setLoading(true)
+    try {
+      // Fetch all posts
+      const response = await fetch('/api/posts/feed')
+      if (!response.ok) throw new Error('Failed to fetch posts')
+      const data = await response.json()
+      setPosts(data)
 
-        // If user is logged in, fetch posts from followed users
-        if (session?.user) {
-          const followingResponse = await fetch('/api/posts/following')
-          if (followingResponse.ok) {
-            const followingData = await followingResponse.json()
-            setFollowingPosts(followingData)
-          }
+      // If user is logged in, fetch posts from followed users
+      if (session?.user) {
+        const followingResponse = await fetch('/api/posts/following')
+        if (followingResponse.ok) {
+          const followingData = await followingResponse.json()
+          setFollowingPosts(followingData)
         }
-      } catch (error) {
-        console.error('Error fetching posts:', error)
-      } finally {
-        setLoading(false)
       }
+    } catch (error) {
+      console.error('Error fetching posts:', error)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchPosts()
+  useEffect(() => {
+    refreshPosts()
   }, [session])
 
   if (status === "loading" || loading) {
@@ -77,7 +80,7 @@ export default function Home() {
       <div className="flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Gun Event Feed</h1>
-          <PostButton />
+          <PostButton onSuccess={refreshPosts} />
         </div>
 
         {session?.user ? (

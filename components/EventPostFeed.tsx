@@ -23,6 +23,8 @@ type CombinedPost = Post & {
   author: {
     id: string
     email: string
+    username?: string
+    profileImageUrl?: string
   }
   event?: {
     id: string
@@ -101,17 +103,8 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
     const postId = post.id
     const isCurrentlyLiked = likedPosts[postId] || false
     
-    // Dump the post structure to console for debugging
-    console.log('Post structure:', JSON.stringify(post, null, 2));
-    
     // All posts now use the unified model
     let endpoint = `/api/posts/${postId}/like`;
-    
-    console.log('Like request:', { 
-      postId,
-      endpoint,
-      hasImage: !!post.imageUrl
-    });
 
     // Optimistic update
     setIsLiking({ ...isLiking, [postId]: true })
@@ -132,8 +125,6 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
       })
 
       if (!response.ok) {
-        console.log(`Like endpoint failed with ${response.status}`);
-        
         // If failed, revert optimistic update
         setLikedPosts({ ...likedPosts, [postId]: isCurrentlyLiked })
         setLikeCount({ 
@@ -148,13 +139,12 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch (parseError) {
-          console.error('Could not parse error response:', parseError);
+          // Error parsing response
         }
         
         throw new Error(`Failed to update like status: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('Error toggling like:', error)
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update like status",
@@ -209,7 +199,6 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
       })));
     }
     
-    console.log(`Post ${post.id} has ${images.length} images:`, images);
     return images;
   };
 
@@ -243,17 +232,28 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
         <Card key={post.id}>
           <CardHeader>
             <div className="flex items-center gap-4">
-              <Avatar>
-                <AvatarFallback>
-                  {post.author.email.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <Link href={`/users/${post.author.id}`} className="hover:opacity-80 transition-opacity">
+                <Avatar>
+                  {post.author.profileImageUrl ? (
+                    <AvatarImage src={post.author.profileImageUrl} alt={post.author.username || post.author.email} />
+                  ) : (
+                    <AvatarFallback>
+                      {post.author.username?.charAt(0).toUpperCase() || post.author.email.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </Link>
               <div className="flex-1">
-                <Link href={`/posts/${post.id}`} className="hover:underline">
-                  <CardTitle className="text-lg">{post.title}</CardTitle>
-                </Link>
+                <CardTitle className="text-lg">
+                  <Link href={`/posts/${post.id}`} className="hover:underline">
+                    {post.title}
+                  </Link>
+                </CardTitle>
                 <div className="text-sm text-muted-foreground">
-                  {post.author.email} • {format(new Date(post.createdAt), 'PPp')}
+                  <Link href={`/users/${post.author.id}`} className="hover:underline">
+                    {post.author.username || post.author.email}
+                  </Link>
+                  • {format(new Date(post.createdAt), 'PPp')}
                 </div>
               </div>
             </div>
@@ -272,18 +272,11 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
             {/* Check for images and use the gallery component if available */}
             {(post.imageUrl || (post.images && post.images.length > 0)) && (
               <div className="mt-4">
-                {/* Console log for debugging */}
                 <ImageGallery
                   images={getPostImages(post)}
                   containerClassName="rounded-lg overflow-hidden bg-muted"
-                  onImageLoad={(index) => {
-                    console.log(`Image ${index} loaded for post ${post.id}`);
-                    handleGalleryImageLoad(post.id, index);
-                  }}
-                  onImageError={(index) => {
-                    console.log(`Image ${index} error for post ${post.id}`);
-                    handleGalleryImageError(post.id, index);
-                  }}
+                  onImageLoad={(index) => handleGalleryImageLoad(post.id, index)}
+                  onImageError={(index) => handleGalleryImageError(post.id, index)}
                 />
                 
                 {/* Add indicator for multiple images */}

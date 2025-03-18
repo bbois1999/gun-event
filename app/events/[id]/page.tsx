@@ -38,6 +38,8 @@ type CombinedPost = Post & {
   author: {
     id: string
     email: string
+    username?: string
+    profileImageUrl?: string | null
   }
   event?: {
     id: string
@@ -83,6 +85,7 @@ export default async function EventPage({ params }: EventPageProps) {
           select: {
             id: true,
             email: true,
+            username: true
           }
         },
         likes: true,
@@ -96,6 +99,28 @@ export default async function EventPage({ params }: EventPageProps) {
         createdAt: 'desc'
       }
     })
+
+    // Get author IDs to fetch their profile images
+    const authorIds = [...new Set(eventPosts.map(post => post.authorId))];
+
+    // Fetch profile images for all authors in a single query
+    const authorProfiles = await prisma.user.findMany({
+      where: {
+        id: {
+          in: authorIds
+        }
+      },
+      select: {
+        id: true,
+        profileImageUrl: true
+      }
+    });
+
+    // Create a lookup map for easy access
+    const profileImageLookup = authorProfiles.reduce((acc, author) => {
+      acc[author.id] = author.profileImageUrl;
+      return acc;
+    }, {} as Record<string, string | null>);
 
     // Fetch images for each post and convert to the expected format
     const postsWithImages: CombinedPost[] = await Promise.all(eventPosts.map(async (post) => {
@@ -118,13 +143,17 @@ export default async function EventPage({ params }: EventPageProps) {
         updatedAt: new Date(img.updatedAt)
       })) : [];
       
-      // Add event details to post
+      // Add event details to post and include profile image
       return {
         ...post,
         images,
         event: {
           id: event.id,
           title: event.title
+        },
+        author: {
+          ...post.author,
+          profileImageUrl: profileImageLookup[post.authorId]
         }
       };
     }));

@@ -43,6 +43,14 @@ const metadata = {
                     name: "otpExpiry",
                     type: "DateTime",
                     isOptional: true,
+                }, profileImageUrl: {
+                    name: "profileImageUrl",
+                    type: "String",
+                    isOptional: true,
+                }, profileImageKey: {
+                    name: "profileImageKey",
+                    type: "String",
+                    isOptional: true,
                 }, posts: {
                     name: "posts",
                     type: "Post",

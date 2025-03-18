@@ -28,6 +28,8 @@ model User {
     preferredMfa   String @default("email") // "email" or "phone"
     otpSecret      String?  // For storing current OTP
     otpExpiry      DateTime? // OTP expiration timestamp
+    profileImageUrl String? // URL for user's profile picture
+    profileImageKey String? // UploadThing file key for deletion
     posts          Post[]
     events         Event[]  // User can create events
     

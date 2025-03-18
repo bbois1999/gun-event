@@ -26,6 +26,7 @@ export async function GET(request: Request) {
           select: {
             id: true,
             email: true,
+            username: true
           },
         },
         event: {
@@ -44,6 +45,28 @@ export async function GET(request: Request) {
       },
     })
     
+    // Get author IDs to fetch their profile images
+    const authorIds = [...new Set(posts.map(post => post.authorId))];
+
+    // Fetch profile images for all authors in a single query
+    const authorProfiles = await prisma.user.findMany({
+      where: {
+        id: {
+          in: authorIds
+        }
+      },
+      select: {
+        id: true,
+        profileImageUrl: true
+      }
+    });
+
+    // Create a lookup map for easy access
+    const profileImageLookup = authorProfiles.reduce((acc, author) => {
+      acc[author.id] = author.profileImageUrl;
+      return acc;
+    }, {} as Record<string, string | null>);
+    
     // Manually fetch and add images for each post
     const postsWithImages = await Promise.all(posts.map(async (post) => {
       // Use $queryRaw instead of accessing the postImage property directly
@@ -56,7 +79,11 @@ export async function GET(request: Request) {
       
       return {
         ...post,
-        images
+        images,
+        author: {
+          ...post.author,
+          profileImageUrl: profileImageLookup[post.authorId]
+        }
       };
     }));
     

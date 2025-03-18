@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Calendar, Heart, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Calendar, Heart, ArrowLeft, ArrowRight, UserIcon } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import Image from 'next/image'
@@ -18,6 +18,8 @@ type CombinedPost = PostType & {
   author: {
     id: string
     email: string
+    username?: string
+    profileImageUrl?: string
   }
   event?: {
     id: string
@@ -147,7 +149,6 @@ export function Post({ post, onPostUpdated }: PostProps) {
       })));
     }
     
-    console.log(`Post ${post.id} has ${images.length} images`, images);
     return images;
   };
 
@@ -160,15 +161,24 @@ export function Post({ post, onPostUpdated }: PostProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-4">
-          <Avatar>
-            <AvatarFallback>
-              {post.author.email.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <Link href={`/users/${post.author.id}`} className="hover:opacity-80 transition-opacity">
+            <Avatar>
+              {post.author.profileImageUrl ? (
+                <AvatarImage src={post.author.profileImageUrl} alt={post.author.username || post.author.email} />
+              ) : (
+                <AvatarFallback>
+                  {post.author.username?.charAt(0).toUpperCase() || post.author.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              )}
+            </Avatar>
+          </Link>
           <div className="flex-1">
             <CardTitle className="text-lg">{post.title}</CardTitle>
             <div className="text-sm text-muted-foreground">
-              {post.author.email} • {format(new Date(post.createdAt), 'PPp')}
+              <Link href={`/users/${post.author.id}`} className="hover:underline">
+                {post.author.username || post.author.email}
+              </Link>
+               • {format(new Date(post.createdAt), 'PPp')}
             </div>
           </div>
         </div>

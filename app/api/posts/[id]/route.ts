@@ -27,6 +27,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           select: {
             id: true,
             email: true,
+            username: true
           },
         },
         event: {
@@ -57,10 +58,23 @@ export async function GET(request: Request, { params }: RouteParams) {
       SELECT * FROM PostImage WHERE postId = ${id} ORDER BY position ASC
     `;
 
+    // Fetch profile image for the author
+    const authorProfile = await prisma.user.findUnique({
+      where: { id: post.authorId },
+      select: {
+        id: true,
+        profileImageUrl: true
+      }
+    });
+
     // Add the images to the post
     const postWithImages = {
       ...post,
-      images
+      images,
+      author: {
+        ...post.author,
+        profileImageUrl: authorProfile?.profileImageUrl || null
+      }
     };
 
     return NextResponse.json(postWithImages);

@@ -28,13 +28,20 @@ export async function GET(
           author: {
             select: {
               id: true,
-              email: true
+              email: true,
+              username: true
             }
           },
           event: {
             select: {
               id: true,
               title: true
+            }
+          },
+          likes: true,
+          _count: {
+            select: {
+              likes: true
             }
           }
         },
@@ -50,7 +57,8 @@ export async function GET(
           author: {
             select: {
               id: true,
-              email: true
+              email: true,
+              username: true
             }
           },
           event: {
@@ -66,8 +74,26 @@ export async function GET(
       })
     ])
 
+    // Get unique author IDs
+    const authorId = params.id;
+
+    // Fetch profile image for the author
+    const authorProfile = await prisma.user.findUnique({
+      where: { id: authorId },
+      select: {
+        id: true,
+        profileImageUrl: true
+      }
+    });
+
     // Combine and sort all posts by creation date
-    const allPosts = [...posts, ...imagePosts].sort((a, b) => 
+    const allPosts = [...posts, ...imagePosts].map(post => ({
+      ...post,
+      author: {
+        ...post.author,
+        profileImageUrl: authorProfile?.profileImageUrl || null
+      }
+    })).sort((a, b) => 
       b.createdAt.getTime() - a.createdAt.getTime()
     )
 

@@ -103,7 +103,11 @@ export function PostCreationDialog({
       setImages(null)
       setSelectedEvent(preselectedEvent || null)
       setOpen(false)
-      onSuccess?.()
+      
+      // Call the onSuccess callback to refresh the posts feed
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error('Error creating post:', error)
       toast({

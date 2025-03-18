@@ -5,16 +5,24 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, UserPlus, UserCheck } from "lucide-react"
+import { Loader2, UserPlus, UserCheck, UserIcon } from "lucide-react"
 import { EventPostFeed } from "@/components/EventPostFeed"
 import { type Post, type ImagePost } from "@/src/types/models"
 import { useToast } from "@/components/ui/use-toast"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 type CombinedPost = (Post | ImagePost) & {
   author: {
     id: string
     email: string
   }
+}
+
+interface UserProfile {
+  id: string;
+  email: string;
+  username: string;
+  profileImageUrl?: string;
 }
 
 interface UserPageProps {
@@ -27,7 +35,7 @@ export default function UserProfilePage({ params }: UserPageProps) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { toast } = useToast()
-  const [user, setUser] = useState<{ id: string, email: string } | null>(null)
+  const [user, setUser] = useState<UserProfile | null>(null)
   const [posts, setPosts] = useState<CombinedPost[]>([])
   const [loading, setLoading] = useState(true)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -62,7 +70,6 @@ export default function UserProfilePage({ params }: UserPageProps) {
         const userData = await response.json()
         setUser(userData)
       } catch (error) {
-        console.error('Error fetching user:', error)
         toast({
           title: "Error",
           description: "Failed to load user profile",
@@ -84,7 +91,7 @@ export default function UserProfilePage({ params }: UserPageProps) {
         const data = await response.json()
         setPosts(data)
       } catch (error) {
-        console.error('Error fetching posts:', error)
+        // Failed to fetch posts
       } finally {
         setLoading(false)
       }
@@ -106,7 +113,7 @@ export default function UserProfilePage({ params }: UserPageProps) {
         setFollowerCount(data.count)
         setIsFollowing(data.isFollowing)
       } catch (error) {
-        console.error('Error checking follow status:', error)
+        // Error checking follow status
       }
     }
 
@@ -139,11 +146,10 @@ export default function UserProfilePage({ params }: UserPageProps) {
       toast({
         title: isFollowing ? "Unfollowed" : "Followed",
         description: isFollowing 
-          ? `You unfollowed ${user?.email}` 
-          : `You are now following ${user?.email}`,
+          ? `You unfollowed ${user?.username || user?.email}` 
+          : `You are now following ${user?.username || user?.email}`,
       })
     } catch (error) {
-      console.error('Error updating follow status:', error)
       toast({
         title: "Error",
         description: "Failed to update follow status",
@@ -200,12 +206,27 @@ export default function UserProfilePage({ params }: UserPageProps) {
             )}
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <span className="font-semibold">Email:</span> {user.email}
-              </div>
-              <div>
-                <span className="font-semibold">Followers:</span> {followerCount}
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-20 w-20">
+                {user.profileImageUrl ? (
+                  <AvatarImage src={user.profileImageUrl} alt={user.username || user.email} />
+                ) : (
+                  <AvatarFallback>
+                    <UserIcon className="h-10 w-10" />
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              
+              <div className="space-y-2">
+                <div>
+                  <span className="font-semibold text-lg">{user.username}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{user.email}</span>
+                </div>
+                <div>
+                  <span className="text-sm">{followerCount} {followerCount === 1 ? "follower" : "followers"}</span>
+                </div>
               </div>
             </div>
           </CardContent>
