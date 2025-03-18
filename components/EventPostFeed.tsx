@@ -227,48 +227,48 @@ export function EventPostFeed({ posts }: EventPostFeedProps) {
   )
 
   return (
-    <div className="space-y-6">
-      {sortedPosts.map((post) => (
-        <Card key={post.id}>
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <Link href={`/users/${post.author.id}`} className="hover:opacity-80 transition-opacity">
-                <Avatar>
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      {sortedPosts.map((post, index) => (
+        <Card key={post.id} className="overflow-hidden">
+          <CardHeader className="pb-2 pt-4 px-4 space-y-1.5">
+            <div className="flex items-center space-x-2">
+              <Link href={`/users/${post.author.id}`} className="flex items-center space-x-2">
+                <Avatar className="h-8 w-8">
                   {post.author.profileImageUrl ? (
                     <AvatarImage src={post.author.profileImageUrl} alt={post.author.username || post.author.email} />
                   ) : (
                     <AvatarFallback>
-                      {post.author.username?.charAt(0).toUpperCase() || post.author.email.charAt(0).toUpperCase()}
+                      {post.author.username 
+                        ? post.author.username.charAt(0).toUpperCase() 
+                        : post.author.email.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   )}
                 </Avatar>
+                <span className="font-medium text-sm">
+                  {post.author.username || post.author.email}
+                </span>
               </Link>
-              <div className="flex-1">
-                <CardTitle className="text-lg">
-                  <Link href={`/posts/${post.id}`} className="hover:underline">
-                    {post.title}
-                  </Link>
-                </CardTitle>
-                <div className="text-sm text-muted-foreground">
-                  <Link href={`/users/${post.author.id}`} className="hover:underline">
-                    {post.author.username || post.author.email}
-                  </Link>
-                  • {format(new Date(post.createdAt), 'PPp')}
-                </div>
-              </div>
             </div>
           </CardHeader>
-          <CardContent>
-            {post.event && (
-              <div className="px-4 py-2 mb-4 bg-muted rounded-md flex items-center">
+
+          {post.event && (
+            <div className="px-4 py-1.5 bg-muted/40 border-y">
+              <Link href={`/events/${post.event.id}`} className="flex items-center text-sm">
                 <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span className="font-medium">Found at: </span>
-                <Link href={`/events/${post.event.id}`} className="ml-1 text-primary hover:underline">
-                  {post.event.title}
-                </Link>
+                <span className="font-medium">Event: </span>
+                <span className="ml-1 text-primary hover:underline">{post.event.title}</span>
+              </Link>
+            </div>
+          )}
+
+          <CardContent className="p-0">
+            {/* Post Text Content */}
+            {post.content && (
+              <div className="px-4 py-2 text-sm">
+                {post.content}
               </div>
             )}
-            <p className="whitespace-pre-wrap">{post.content}</p>
+
             {/* Check for images and use the gallery component if available */}
             {(post.imageUrl || (post.images && post.images.length > 0)) && (
               <div className="mt-4">

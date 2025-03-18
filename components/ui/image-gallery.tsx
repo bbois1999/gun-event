@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, X, ImageIcon, ZoomIn, ZoomOut, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ImageIcon, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSwipeable } from "react-swipeable";
 
@@ -26,145 +25,34 @@ export function ImageGallery({
   onImageError,
 }: ImageGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [fullscreen, setFullscreen] = useState(false);
-  const [imageLoadingStates, setImageLoadingStates] = useState<boolean[]>([]);
-  const [imageErrorStates, setImageErrorStates] = useState<boolean[]>([]);
-  const [showControls, setShowControls] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
-  const galleryRef = useRef<HTMLDivElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const [imageLoadingStates, setImageLoadingStates] = useState<boolean[]>(new Array(images.length).fill(false));
+  const [imageErrorStates, setImageErrorStates] = useState<boolean[]>(new Array(images.length).fill(false));
   
-  // Store the timeout ID in a ref to prevent issues with stale closures
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Initialize loading states
-  useEffect(() => {
-    setImageLoadingStates(new Array(images.length).fill(false));
-    setImageErrorStates(new Array(images.length).fill(false));
-    // Reset zoom state when images change
+  const handlePrev = () => {
     setIsZoomed(false);
-  }, [images.length]);
-
-  // Create a stable resetControlsTimeout function with useCallback
-  const resetControlsTimeout = useCallback(() => {
-    // Clear existing timeout
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-      controlsTimeoutRef.current = null;
-    }
-    
-    // Show controls
-    setShowControls(true);
-    
-    // Set a new timeout to hide controls after 3 seconds of inactivity
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (!isZoomed) { // Don't auto-hide controls when zoomed
-        setShowControls(false);
-      }
-    }, 3000);
-  }, [isZoomed]);
-
-  const handlePrev = (e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    setIsZoomed(false); // Reset zoom when changing images
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-    resetControlsTimeout();
   };
 
-  const handleNext = (e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    setIsZoomed(false); // Reset zoom when changing images
+  const handleNext = () => {
+    setIsZoomed(false);
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-    resetControlsTimeout();
   };
 
-  const handleImageLoad = (index: number) => {
-    setImageLoadingStates((prev) => {
-      const newStates = [...prev];
-      newStates[index] = false;
-      return newStates;
-    });
-    onImageLoad?.(index);
-  };
-
-  const handleImageError = (index: number) => {
-    setImageLoadingStates((prev) => {
-      const newStates = [...prev];
-      newStates[index] = false;
-      return newStates;
-    });
-    setImageErrorStates((prev) => {
-      const newStates = [...prev];
-      newStates[index] = true;
-      return newStates;
-    });
-    onImageError?.(index);
-  };
-
-  const openFullscreen = (e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    console.log("Opening fullscreen gallery");
-    setFullscreen(true);
-    resetControlsTimeout();
-  };
-  
-  const toggleZoom = (e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-    }
+  const toggleZoom = () => {
     setIsZoomed(!isZoomed);
-    resetControlsTimeout();
   };
-  
-  const handleDialogClick = () => {
-    setShowControls(prev => !prev);
-    resetControlsTimeout();
-  };
-  
-  // Force controls to show on mouse movement
-  const handleMouseMove = useCallback(() => {
-    if (!showControls) {
-      setShowControls(true);
-      resetControlsTimeout();
-    }
-  }, [showControls, resetControlsTimeout]);
-  
+
   // Swipe handlers for mobile
   const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => {
-      console.log("Swiped left");
-      handleNext();
-    },
-    onSwipedRight: () => {
-      console.log("Swiped right");
-      handlePrev();
-    },
-    onSwipedUp: () => {
-      console.log("Swiped up");
-      setFullscreen(false);
-    },
-    onTap: () => {
-      console.log("Tapped");
-      handleDialogClick();
-    },
+    onSwipedLeft: handleNext,
+    onSwipedRight: handlePrev,
     trackMouse: true,
-    preventScrollOnSwipe: true,
-    delta: 10, // Minimum swipe distance
-    rotationAngle: 0
   });
 
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!fullscreen) return;
-      
       switch (e.key) {
         case "ArrowLeft":
           handlePrev();
@@ -173,378 +61,75 @@ export function ImageGallery({
           handleNext();
           break;
         case "Escape":
-          if (isZoomed) {
-            setIsZoomed(false);
-          } else {
-            setFullscreen(false);
-          }
-          break;
-        case " ": // Space key
-          toggleZoom();
-          e.preventDefault();
+          setIsZoomed(false);
           break;
       }
-      
-      resetControlsTimeout();
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [fullscreen, isZoomed, resetControlsTimeout]);
-  
-  // Setup auto-hide for controls on fullscreen
-  useEffect(() => {
-    if (fullscreen) {
-      resetControlsTimeout();
-    }
-    
-    return () => {
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-        controlsTimeoutRef.current = null;
-      }
-    };
-  }, [fullscreen, resetControlsTimeout]);
+  }, []);
 
-  // Simple case: single image
-  if (images.length === 1) {
-    return (
-      <div 
-        className={cn(
-          "relative w-full aspect-video rounded-lg overflow-hidden bg-muted cursor-pointer",
-          containerClassName
-        )}
-      >
-        {imageLoadingStates[0] === true && !imageErrorStates[0] && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-8 w-8 animate-pulse">
-              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </div>
-        )}
-        {imageErrorStates[0] === true && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">Failed to load image</p>
-          </div>
-        )}
-        <div className="absolute bottom-2 right-2 z-10">
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="h-8 w-8 rounded-full opacity-80 hover:opacity-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              openFullscreen();
-            }}
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        {/* Add a clickable overlay for better touch/click area */}
-        <div 
-          className="absolute inset-0 z-5 cursor-pointer" 
-          onClick={openFullscreen}
-          aria-label="View image fullscreen"
-        ></div>
-        
-        <Image
-          src={images[0].url}
-          alt="Gallery image"
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          priority
-          onLoad={() => handleImageLoad(0)}
-          onError={() => handleImageError(0)}
-          crossOrigin="anonymous"
-        />
-      </div>
-    );
-  }
-
-  // Multiple images
+  // Gallery with ONE image at a time
   return (
-    <>
+    <div className={cn("relative w-full h-full flex flex-col items-center justify-center bg-zinc-900/95 text-zinc-200", containerClassName)}>
       <div 
-        ref={galleryRef}
-        className={cn(
-          "relative w-full aspect-video rounded-lg overflow-hidden bg-muted",
-          containerClassName
-        )}
+        className="relative w-full h-full flex items-center justify-center"
+        {...swipeHandlers}
       >
-        {/* Main image */}
-        <div 
-          className="w-full h-full cursor-pointer"
-        >
-          {imageLoadingStates[currentIndex] === true && !imageErrorStates[currentIndex] && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="h-8 w-8 animate-pulse">
-                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </div>
-          )}
-          {imageErrorStates[currentIndex] === true && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">Failed to load image</p>
-            </div>
-          )}
-          
-          {/* Add a clickable overlay for better touch/click area */}
-          <div 
-            className="absolute inset-0 z-5 cursor-pointer" 
-            onClick={openFullscreen}
-            aria-label="View gallery fullscreen"
-          ></div>
-          
-          <Image
+        {/* Current image */}
+        <div className="w-full h-full flex items-center justify-center p-4">
+          <img
             src={images[currentIndex].url}
             alt={`Gallery image ${currentIndex + 1}`}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            priority
-            onLoad={() => handleImageLoad(currentIndex)}
-            onError={() => handleImageError(currentIndex)}
-            crossOrigin="anonymous"
+            className={cn(
+              "max-w-[85vw] sm:max-w-[80vw] md:max-w-[75vw] lg:max-w-[70vw] max-h-[75vh] sm:max-h-[80vh] object-contain transition-transform duration-200",
+              isZoomed ? "scale-150" : "scale-100"
+            )}
+            style={{ transition: "transform 0.2s ease" }}
+            onClick={toggleZoom}
           />
         </div>
-
-        {/* Navigation buttons */}
+        
+        {/* Left arrow */}
         <Button
-          variant="secondary"
+          variant="ghost"
           size="icon"
-          className="absolute left-2 top-1/2 transform -translate-y-1/2 h-8 w-8 rounded-full opacity-80 hover:opacity-100 z-10"
-          onClick={handlePrev}
+          className="absolute left-2 h-10 w-10 rounded-full bg-zinc-800/70 text-zinc-200 hover:bg-zinc-700/90"
+          onClick={(e) => { e.stopPropagation(); handlePrev(); }}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-6 w-6" />
         </Button>
-
+        
+        {/* Right arrow */}
         <Button
-          variant="secondary"
+          variant="ghost"
           size="icon"
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 rounded-full opacity-80 hover:opacity-100 z-10"
-          onClick={handleNext}
+          className="absolute right-2 h-10 w-10 rounded-full bg-zinc-800/70 text-zinc-200 hover:bg-zinc-700/90"
+          onClick={(e) => { e.stopPropagation(); handleNext(); }}
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-6 w-6" />
         </Button>
-
+        
         {/* Zoom button */}
-        <Button 
-          size="icon" 
-          variant="secondary" 
-          className="absolute bottom-2 right-2 z-10 h-8 w-8 rounded-full opacity-80 hover:opacity-100"
-          onClick={openFullscreen}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-zinc-800/70 text-zinc-200 hover:bg-zinc-700/90"
+          onClick={toggleZoom}
         >
-          <ZoomIn className="h-4 w-4" />
+          {isZoomed ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
         </Button>
-
-        {/* Thumbnail indicators */}
-        <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10">
-          {images.map((_, index) => (
-            <button
-              key={index}
-              className={cn(
-                "w-2 h-2 rounded-full transition-all",
-                index === currentIndex
-                  ? "bg-white scale-125"
-                  : "bg-white/50 hover:bg-white/80"
-              )}
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentIndex(index);
-              }}
-              aria-label={`View image ${index + 1}`}
-            />
-          ))}
+        
+        {/* Image counter */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800/70 text-zinc-200 px-3 py-1 rounded-full">
+          <p className="text-sm font-medium">
+            {currentIndex + 1} / {images.length}
+          </p>
         </div>
       </div>
-
-      {/* Fullscreen dialog */}
-      <Dialog 
-        open={fullscreen} 
-        onOpenChange={(open) => {
-          // When closing, ensure we reset everything
-          if (!open) {
-            setIsZoomed(false);
-            setShowControls(true);
-            if (controlsTimeoutRef.current) {
-              clearTimeout(controlsTimeoutRef.current);
-              controlsTimeoutRef.current = null;
-            }
-          }
-          setFullscreen(open);
-        }}
-      >
-        <DialogContent 
-          {...swipeHandlers}
-          className={cn(
-            "sm:max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none transition-all duration-300 overflow-hidden",
-            isZoomed ? "cursor-zoom-out" : "cursor-pointer"
-          )}
-        >
-          <div 
-            ref={dialogRef}
-            className="relative w-full h-[90vh] flex items-center justify-center overflow-hidden"
-            onClick={isZoomed ? toggleZoom : handleDialogClick}
-            onMouseMove={handleMouseMove}
-          >
-            {/* Close button */}
-            {showControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 text-white z-50"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFullscreen(false);
-                }}
-              >
-                <X className="h-6 w-6" />
-              </Button>
-            )}
-
-            {/* Left navigation */}
-            {showControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white z-50"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePrev();
-                }}
-              >
-                <ChevronLeft className="h-10 w-10" />
-              </Button>
-            )}
-
-            {/* Image container */}
-            <div 
-              className={cn(
-                "relative h-full transition-transform duration-300 ease-out",
-                isZoomed ? "w-[200%]" : "w-full"
-              )}
-            >
-              {/* Loading indicator */}
-              {imageLoadingStates[currentIndex] === true && !imageErrorStates[currentIndex] && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-16 w-16 animate-pulse">
-                    <ImageIcon className="h-16 w-16 text-white/70" />
-                  </div>
-                </div>
-              )}
-              
-              {/* Error state */}
-              {imageErrorStates[currentIndex] === true && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <ImageIcon className="h-16 w-16 text-white/70 mb-4" />
-                  <p className="text-xl text-white/70">Failed to load image</p>
-                </div>
-              )}
-              
-              <Image
-                src={images[currentIndex].url}
-                alt={`Gallery image ${currentIndex + 1} (fullscreen)`}
-                fill
-                className={cn(
-                  "transition-all duration-300",
-                  isZoomed ? "object-contain scale-150" : "object-contain"
-                )}
-                sizes="100vw"
-                priority
-                crossOrigin="anonymous"
-                onLoad={() => handleImageLoad(currentIndex)}
-                onError={() => handleImageError(currentIndex)}
-              />
-            </div>
-
-            {/* Right navigation */}
-            {showControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white z-50"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNext();
-                }}
-              >
-                <ChevronRight className="h-10 w-10" />
-              </Button>
-            )}
-
-            {/* Show controls button (always visible) */}
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute right-2 top-2 text-white z-50 opacity-50 hover:opacity-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowControls(true);
-                resetControlsTimeout();
-              }}
-              style={{ display: showControls ? 'none' : 'flex' }}
-            >
-              <Info className="h-5 w-5" />
-            </Button>
-
-            {/* Zoom toggle button */}
-            {showControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 bottom-2 text-white z-50"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleZoom();
-                }}
-              >
-                {isZoomed ? (
-                  <ZoomOut className="h-6 w-6" />
-                ) : (
-                  <ZoomIn className="h-6 w-6" />
-                )}
-              </Button>
-            )}
-
-            {/* Image counter */}
-            {showControls && images.length > 1 && (
-              <div className="absolute left-2 bottom-2 text-white z-50 bg-black/30 px-2 py-1 rounded">
-                <span className="text-sm">
-                  {currentIndex + 1} / {images.length}
-                </span>
-              </div>
-            )}
-
-            {/* Thumbnail indicators */}
-            {showControls && images.length > 1 && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                {images.map((_, index) => (
-                  <button
-                    key={index}
-                    className={cn(
-                      "w-3 h-3 rounded-full transition-all",
-                      index === currentIndex
-                        ? "bg-white scale-125"
-                        : "bg-white/50 hover:bg-white/80"
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentIndex(index);
-                    }}
-                    aria-label={`View image ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 } 

@@ -167,7 +167,9 @@ export default async function EventPage({ params }: EventPageProps) {
             <h2 className="text-2xl font-semibold mb-6">Event Discussion</h2>
             <PostButton preselectedEvent={event} className="mb-8" />
           </div>
-          <EventPostFeed posts={postsWithImages} />
+          <div className="px-2 sm:px-0">
+            <EventPostFeed posts={postsWithImages} />
+          </div>
         </div>
       </div>
     )

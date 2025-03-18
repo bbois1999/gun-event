@@ -11,6 +11,7 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: "Gun Show Website",
   description: "Connect with gun show events and enthusiasts",
+  viewport: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
 };
 
 export default function RootLayout({

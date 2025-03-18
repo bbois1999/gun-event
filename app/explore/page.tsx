@@ -119,10 +119,10 @@ export default function ExplorePage() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8">
-      <div className="space-y-6">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-4xl">
+      <div className="space-y-4 sm:space-y-6">
         <div className="flex flex-col space-y-4">
-          <h1 className="text-3xl font-bold">Explore Users</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Explore Users</h1>
           <p className="text-muted-foreground">
             Discover other users and follow them to see their posts in your feed.
           </p>
@@ -138,7 +138,7 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
           {filteredUsers.length > 0 ? (
             filteredUsers.map(user => (
               <Card key={user.id}>
@@ -151,11 +151,12 @@ export default function ExplorePage() {
                     <span>User ID: {user.id.slice(0, 8)}...</span>
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
+                <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
                   <Button 
                     variant="outline" 
                     size="sm"
                     asChild
+                    className="w-full sm:w-auto"
                   >
                     <Link href={`/users/${user.id}`}>
                       View Profile
@@ -166,6 +167,7 @@ export default function ExplorePage() {
                     disabled={followLoading[user.id]}
                     variant={user.isFollowing ? "outline" : "default"}
                     size="sm"
+                    className="w-full sm:w-auto"
                   >
                     {followLoading[user.id] ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -180,7 +182,7 @@ export default function ExplorePage() {
               </Card>
             ))
           ) : (
-            <div className="col-span-2 text-center py-8 text-muted-foreground">
+            <div className="col-span-1 sm:col-span-2 text-center py-6 sm:py-8 text-muted-foreground">
               {searchQuery ? 'No users found matching your search.' : 'No users available.'}
             </div>
           )}

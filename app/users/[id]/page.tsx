@@ -170,9 +170,9 @@ export default function UserProfilePage({ params }: UserPageProps) {
 
   if (!user) {
     return (
-      <div className="container max-w-4xl mx-auto py-8">
+      <div className="container mx-auto px-4 py-4 sm:py-8 max-w-4xl">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">User not found</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">User not found</h1>
           <p className="mt-2 text-muted-foreground">
             The user you're looking for doesn't exist or has been removed.
           </p>
@@ -182,10 +182,10 @@ export default function UserProfilePage({ params }: UserPageProps) {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8">
-      <div className="space-y-8">
+    <div className="container mx-auto px-4 py-4 sm:py-8 max-w-4xl">
+      <div className="space-y-6 sm:space-y-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-2">
             <CardTitle>User Profile</CardTitle>
             {!isOwnProfile && session?.user && (
               <Button 
@@ -193,6 +193,7 @@ export default function UserProfilePage({ params }: UserPageProps) {
                 disabled={followLoading}
                 variant={isFollowing ? "outline" : "default"}
                 size="sm"
+                className="w-full sm:w-auto"
               >
                 {followLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -206,7 +207,7 @@ export default function UserProfilePage({ params }: UserPageProps) {
             )}
           </CardHeader>
           <CardContent>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
               <Avatar className="h-20 w-20">
                 {user.profileImageUrl ? (
                   <AvatarImage src={user.profileImageUrl} alt={user.username || user.email} />
@@ -217,7 +218,7 @@ export default function UserProfilePage({ params }: UserPageProps) {
                 )}
               </Avatar>
               
-              <div className="space-y-2">
+              <div className="space-y-2 text-center sm:text-left">
                 <div>
                   <span className="font-semibold text-lg">{user.username}</span>
                 </div>
@@ -233,13 +234,15 @@ export default function UserProfilePage({ params }: UserPageProps) {
         </Card>
 
         <div>
-          <h2 className="text-2xl font-semibold mb-6">Posts</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Posts</h2>
           {loading ? (
-            <div className="flex justify-center py-8">
+            <div className="flex justify-center py-6 sm:py-8">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <EventPostFeed posts={posts} />
+            <div className="px-2 sm:px-0">
+              <EventPostFeed posts={posts} />
+            </div>
           )}
         </div>
       </div>

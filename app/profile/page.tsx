@@ -121,15 +121,15 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8">
-      <div className="space-y-8">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-4xl">
+      <div className="space-y-6 sm:space-y-8">
         <Card>
           <CardHeader>
             <CardTitle>Your Profile</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center space-x-4">
-              <div className="relative group">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="relative group mx-auto sm:mx-0">
                 <Avatar className="h-20 w-20">
                   {session.user.profileImageUrl ? (
                     <AvatarImage src={session.user.profileImageUrl || ''} alt={session.user.username || session.user.email || ''} />
@@ -149,7 +149,7 @@ export default function ProfilePage() {
                 </Button>
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-2 text-center sm:text-left">
                 <div>
                   <span className="font-semibold text-lg">{session.user.username}</span>
                 </div>
@@ -162,19 +162,21 @@ export default function ProfilePage() {
         </Card>
 
         <div>
-          <h2 className="text-2xl font-semibold mb-6">Your Posts</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Your Posts</h2>
           {loading ? (
-            <div className="flex justify-center py-8">
+            <div className="flex justify-center py-6 sm:py-8">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <EventPostFeed posts={posts} />
+            <div className="px-2 sm:px-0">
+              <EventPostFeed posts={posts} />
+            </div>
           )}
         </div>
       </div>
       
       <Dialog open={openImageUpload} onOpenChange={setOpenImageUpload}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-w-[95vw] rounded-lg">
           <DialogHeader>
             <DialogTitle>Update profile picture</DialogTitle>
           </DialogHeader>

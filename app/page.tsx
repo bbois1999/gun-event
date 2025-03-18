@@ -77,36 +77,36 @@ export default function Home() {
   }
 
   return (
-    <main className="container max-w-4xl mx-auto py-8">
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Gun Event Feed</h1>
+    <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-4xl">
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold">Gun Event Feed</h1>
           <PostButton onSuccess={refreshPosts} />
         </div>
 
         {session?.user ? (
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="all">All Posts</TabsTrigger>
-              <TabsTrigger value="following">Following</TabsTrigger>
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+              <TabsTrigger value="all" className="text-sm sm:text-base">All Posts</TabsTrigger>
+              <TabsTrigger value="following" className="text-sm sm:text-base">Following</TabsTrigger>
             </TabsList>
-            <TabsContent value="all" className="mt-6">
+            <TabsContent value="all" className="mt-4 sm:mt-6">
               {posts.length > 0 ? (
                 <EventPostFeed posts={posts} />
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-6 sm:py-8 text-muted-foreground">
                   No posts available. Be the first to create a post!
                 </div>
               )}
             </TabsContent>
-            <TabsContent value="following" className="mt-6">
+            <TabsContent value="following" className="mt-4 sm:mt-6">
               {followingPosts.length > 0 ? (
                 <EventPostFeed posts={followingPosts} />
               ) : (
-                <div className="text-center py-8 text-muted-foreground space-y-4">
+                <div className="text-center py-6 sm:py-8 text-muted-foreground space-y-4">
                   <p>You're not following anyone yet, or the people you follow haven't posted anything.</p>
                   <p>Explore users and their posts to find people to follow!</p>
-                  <Button asChild>
+                  <Button asChild size="sm" className="sm:size-md">
                     <Link href="/explore">Explore Users</Link>
                   </Button>
                 </div>
@@ -117,13 +117,13 @@ export default function Home() {
           <div>
             {posts.length > 0 ? (
               <>
-                <div className="bg-muted p-4 mb-6 rounded-lg">
-                  <p className="text-sm text-center">Sign in to like posts and follow users!</p>
+                <div className="bg-muted p-3 sm:p-4 mb-4 sm:mb-6 rounded-lg">
+                  <p className="text-xs sm:text-sm text-center">Sign in to like posts and follow users!</p>
                 </div>
                 <EventPostFeed posts={posts} />
               </>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-6 sm:py-8 text-muted-foreground">
                 No posts available. Sign in to create a post!
               </div>
             )}

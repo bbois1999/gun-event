@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { PlusCircle, Filter, CalendarIcon, Clock, Loader2 } from "lucide-react"
+import { PlusCircle, Filter, CalendarIcon, Clock, Loader2, User } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
@@ -227,12 +227,12 @@ export default function EventsPage() {
   }
 
   return (
-    <main className="container mx-auto py-8 max-w-7xl">
-      <div className="flex flex-col lg:flex-row gap-8 justify-center">
-        <div className="w-full lg:w-2/5 max-w-md">
-          <Card className="mb-6">
+    <main className="container mx-auto px-4 py-4 sm:py-8 max-w-7xl">
+      <div className="flex flex-col lg:flex-row gap-6 justify-center">
+        <div className="w-full lg:w-2/5 max-w-md mx-auto lg:mx-0">
+          <Card className="mb-5">
             <CardHeader>
-              <CardTitle className="flex justify-between items-center">
+              <CardTitle className="flex justify-between items-center text-xl sm:text-2xl">
                 Location Filter
                 {selectedCity && (
                   <Button variant="ghost" size="sm" onClick={clearFilter}>
@@ -250,11 +250,11 @@ export default function EventsPage() {
                 value={selectedCity || undefined}
                 onValueChange={setSelectedCity}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a city" />
                 </SelectTrigger>
                 <SelectContent>
-                  {NORTHWEST_CITIES.map((city) => (
+                  {NORTHWEST_CITIES.map(city => (
                     <SelectItem key={city} value={city}>
                       {city}
                     </SelectItem>
@@ -263,197 +263,224 @@ export default function EventsPage() {
               </Select>
             </CardContent>
           </Card>
-
+          
           <Card>
             <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                Event Calendar
-                <div className="flex gap-2">
-                  {isDateSelected && (
-                    <Button variant="outline" size="sm" onClick={clearDateSelection}>
-                      <CalendarIcon className="h-4 w-4 mr-2" />
-                      Show All Events
-                    </Button>
-                  )}
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="flex gap-1">
-                        <PlusCircle className="h-4 w-4" />
-                        Add Event
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add New Event</DialogTitle>
-                        <DialogDescription>
-                          Create a new event for {date ? format(date, "PPP") : "the future"}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="title">Title</Label>
-                          <Input
-                            id="title"
-                            value={newEvent.title}
-                            onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                            placeholder="Event Title"
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea
-                            id="description"
-                            value={newEvent.description}
-                            onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                            placeholder="Event Description"
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="time">Time</Label>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <Input
-                              id="time"
-                              type="time"
-                              value={newEvent.time}
-                              onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="location">Location</Label>
-                          <Select 
-                            value={newEvent.location} 
-                            onValueChange={(value: string) => setNewEvent({...newEvent, location: value})}
-                          >
-                            <SelectTrigger id="location">
-                              <SelectValue placeholder="Select a city" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {NORTHWEST_CITIES.map((city) => (
-                                <SelectItem key={city} value={city}>
-                                  {city}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="organizer">Organizer</Label>
-                          <Input
-                            id="organizer"
-                            value={newEvent.organizer}
-                            onChange={(e) => setNewEvent({...newEvent, organizer: e.target.value})}
-                            placeholder="Event Organizer"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                        <Button 
-                          onClick={handleAddEvent} 
-                          disabled={isSubmitting || !date || !newEvent.title}
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            "Save Event"
-                          )}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+              <CardTitle className="flex justify-between items-center text-xl sm:text-2xl">
+                Calendar
+                {isDateSelected && (
+                  <Button variant="ghost" size="sm" onClick={clearDateSelection}>
+                    Clear Date
+                  </Button>
+                )}
               </CardTitle>
+              <CardDescription>
+                Select a date to view events
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Calendar
                 mode="single"
                 selected={date}
                 onSelect={handleDateSelect}
-                className="rounded-md border w-full mx-auto text-lg p-4"
+                className="rounded-md mx-auto"
                 modifiers={{
-                  hasEvent: dateHasEvent
+                  event: (date) => dateHasEvent(date)
                 }}
                 modifiersClassNames={{
-                  hasEvent: "bg-red-500 text-white hover:bg-red-600 font-medium"
+                  event: "bg-primary/10 font-bold text-primary"
                 }}
               />
             </CardContent>
           </Card>
         </div>
         
-        <div className="w-full lg:w-3/5 max-w-2xl">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>
-                {isDateSelected
-                  ? (selectedCity 
-                      ? `Events in ${selectedCity} for ${date ? format(date, "PPP") : ""}` 
-                      : `Events for ${date ? format(date, "PPP") : ""}`)
-                  : (selectedCity
-                      ? `Upcoming Events in ${selectedCity}`
-                      : "All Upcoming Events")
-                }
-              </CardTitle>
-              <CardDescription>
-                {!isDateSelected
-                  ? `${displayEvents.length} upcoming event(s)`
-                  : (displayEvents.length === 0 
-                      ? "No events scheduled for this date" 
-                      : `${displayEvents.length} event(s) scheduled`)
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center items-center h-64">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
+        <div className="w-full lg:w-3/5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+            <h2 className="text-xl sm:text-2xl font-bold">
+              {isDateSelected && date ? (
+                `Events on ${format(date, 'MMMM d, yyyy')}`
               ) : (
-                <div className="space-y-4">
-                  {displayEvents.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      {isDateSelected 
-                        ? "No events found for this date. Click \"Add Event\" to create one."
-                        : "No upcoming events. Click \"Add Event\" to create one."}
-                    </div>
-                  ) : (
-                    displayEvents.map(event => (
-                      <Link 
-                        key={event.id} 
-                        href={`/events/${event.id}`}
-                        className="block transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                      >
-                        <Card>
-                          <CardHeader>
-                            <div className="flex items-center justify-between">
-                              <CardTitle>{event.title}</CardTitle>
-                              {!isDateSelected && (
-                                <span className="text-sm font-medium text-muted-foreground">
-                                  {formatEventDate(event.date)}
-                                </span>
-                              )}
-                            </div>
-                            <CardDescription>{event.location}</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <p>{event.description}</p>
-                            <div className="mt-2 text-sm text-muted-foreground">
-                              Organized by: {event.organizer}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))
-                  )}
-                </div>
+                "Upcoming Events"
               )}
-            </CardContent>
-          </Card>
+              {selectedCity && <span className="block sm:inline text-base sm:text-xl mt-1 sm:mt-0 sm:ml-2">in {selectedCity}</span>}
+            </h2>
+            
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="w-full sm:w-auto">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Event
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md max-w-[95vw]">
+                <DialogHeader>
+                  <DialogTitle>Add New Event</DialogTitle>
+                  <DialogDescription>
+                    Create a new event for gun enthusiasts
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="title" className="text-right">
+                      Title
+                    </Label>
+                    <Input
+                      id="title"
+                      placeholder="Enter event title"
+                      className="col-span-3"
+                      value={newEvent.title}
+                      onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="description" className="text-right">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Enter event description"
+                      className="col-span-3"
+                      value={newEvent.description}
+                      onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="date" className="text-right">
+                      Date
+                    </Label>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        className={!date ? "text-muted-foreground" : ""}
+                        onClick={() => setIsDialogOpen(false)}
+                        type="button"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : "Select date"}
+                      </Button>
+                      <p className="text-sm text-muted-foreground">
+                        Please select a date on the calendar first
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="time" className="text-right">
+                      Time
+                    </Label>
+                    <div className="col-span-3">
+                      <Input
+                        id="time"
+                        type="time"
+                        value={newEvent.time}
+                        onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="location" className="text-right">
+                      Location
+                    </Label>
+                    <div className="col-span-3">
+                      <Select
+                        value={newEvent.location}
+                        onValueChange={(value) => setNewEvent({...newEvent, location: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a city" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {NORTHWEST_CITIES.map(city => (
+                            <SelectItem key={city} value={city}>
+                              {city}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="organizer" className="text-right">
+                      Organizer
+                    </Label>
+                    <Input
+                      id="organizer"
+                      placeholder="Enter organizer name"
+                      className="col-span-3"
+                      value={newEvent.organizer}
+                      onChange={(e) => setNewEvent({...newEvent, organizer: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" onClick={handleAddEvent} disabled={isSubmitting || !date || !newEvent.title}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Event"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          {displayEvents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {displayEvents.map(event => (
+                <Card key={event.id} className="h-full">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base sm:text-lg">{event.title}</CardTitle>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <CalendarIcon className="mr-1 h-4 w-4" />
+                      {formatEventDate(event.date)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="py-2">
+                    <p className="text-sm line-clamp-2 mb-2">{event.description}</p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                      <span className="flex items-center">
+                        <Filter className="mr-1 h-3 w-3" /> 
+                        {event.location}
+                      </span>
+                      {event.organizer && (
+                        <span className="flex items-center">
+                          <User className="mr-1 h-3 w-3" /> 
+                          {event.organizer}
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild variant="secondary" size="sm" className="w-full">
+                      <Link href={`/events/${event.id}`}>
+                        View Details
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center text-center h-[200px]">
+                  <CalendarIcon className="h-10 w-10 text-muted-foreground mb-4" />
+                  <h3 className="font-medium text-lg mb-2">No events found</h3>
+                  <p className="text-muted-foreground text-sm max-w-md">
+                    {isDateSelected && date
+                      ? `There are no events scheduled for ${format(date, 'MMMM d, yyyy')}${selectedCity ? ` in ${selectedCity}` : ''}.`
+                      : selectedCity
+                        ? `There are no upcoming events in ${selectedCity}.`
+                        : 'There are no upcoming events scheduled.'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </main>
