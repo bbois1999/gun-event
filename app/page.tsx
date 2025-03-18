@@ -42,8 +42,9 @@ export default function Home() {
   const refreshPosts = async () => {
     setLoading(true)
     try {
-      // Fetch all posts
-      const response = await fetch('/api/posts/feed')
+      // Fetch all posts - use the main posts API for unauthenticated users
+      const endpoint = session?.user ? '/api/posts/feed' : '/api/posts'
+      const response = await fetch(endpoint)
       if (!response.ok) throw new Error('Failed to fetch posts')
       const data = await response.json()
       setPosts(data)
@@ -115,7 +116,12 @@ export default function Home() {
         ) : (
           <div>
             {posts.length > 0 ? (
-              <EventPostFeed posts={posts} />
+              <>
+                <div className="bg-muted p-4 mb-6 rounded-lg">
+                  <p className="text-sm text-center">Sign in to like posts and follow users!</p>
+                </div>
+                <EventPostFeed posts={posts} />
+              </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 No posts available. Sign in to create a post!

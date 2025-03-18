@@ -6,16 +6,12 @@ import { authOptions } from '@/lib/auth'
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email! }
-    })
-
-    if (!currentUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    let currentUser = null;
+    
+    if (session?.user) {
+      currentUser = await prisma.user.findUnique({
+        where: { email: session.user.email! }
+      })
     }
 
     // Fetch posts with their authors, events, and likes
@@ -37,7 +33,7 @@ export async function GET(request: Request) {
             title: true
           }
         },
-        likes: {
+        likes: currentUser ? {
           where: {
             userId: currentUser.id
           },
@@ -45,7 +41,7 @@ export async function GET(request: Request) {
             id: true,
             userId: true
           }
-        },
+        } : undefined,
         _count: {
           select: {
             likes: true

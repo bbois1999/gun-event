@@ -8,11 +8,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 })
-    }
-
+    // No need for authentication for public posts
+    
     // Properly await params before accessing its properties
     const resolvedParams = await Promise.resolve(params)
     const userId = resolvedParams.id

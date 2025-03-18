@@ -7,7 +7,10 @@ export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ 
+        error: 'Authentication required', 
+        message: 'You need to be signed in to view your following feed'
+      }, { status: 401 })
     }
 
     const currentUser = await prisma.user.findUnique({
